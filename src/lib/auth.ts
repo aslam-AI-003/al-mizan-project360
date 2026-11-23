@@ -64,11 +64,14 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
 
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;
 
+/**
+ * Only the Owner (ADMIN) can use the app right now. The SUPERVISOR role is kept
+ * in the database so it can be switched back on later, but it has no screens.
+ */
+export function canSignIn(role: Role) {
+  return role === "ADMIN";
+}
+
 export function homeForRole(role: Role) {
-  switch (role) {
-    case "ADMIN":
-      return "/admin";
-    case "SUPERVISOR":
-      return "/supervisor";
-  }
+  return canSignIn(role) ? "/admin" : "/login";
 }

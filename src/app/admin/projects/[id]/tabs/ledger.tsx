@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Download, BookOpen } from "lucide-react";
 import type { Project } from "@prisma/client";
 import type { LedgerDay, SpendBreakdown } from "@/lib/project-costs";
@@ -45,7 +46,7 @@ export function LedgerTab({ project, spend, days }: { project: Project; spend: S
           )}
         </div>
         {rows.length === 0 ? (
-          <EmptyState icon={BookOpen} title="No spending yet" description="Labour, material and expense entries will appear here day by day." />
+          <EmptyState icon={BookOpen} title="No spending yet" description="Add a Daily Entry and it will appear here." />
         ) : (
           <div className="card overflow-x-auto p-0">
             <table className="w-full text-sm">
@@ -62,7 +63,11 @@ export function LedgerTab({ project, spend, days }: { project: Project; spend: S
               <tbody>
                 {rows.map((d) => (
                   <tr key={d.date} className="border-b border-black/5 last:border-0">
-                    <td className="px-4 py-3 font-medium text-[var(--foreground)]">{formatDate(new Date(d.date))}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <Link href={`/admin/entry?project=${project.id}&date=${d.date}`} className="text-brand-navy hover:underline">
+                        {formatDate(new Date(d.date))}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-right text-black/70">{formatINR(d.labour)}</td>
                     <td className="px-4 py-3 text-right text-black/70">{formatINR(d.material)}</td>
                     <td className="px-4 py-3 text-right text-black/70">{formatINR(d.other)}</td>

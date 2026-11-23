@@ -3,7 +3,7 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { createSession, homeForRole } from "@/lib/auth";
+import { createSession, homeForRole, canSignIn } from "@/lib/auth";
 
 export type LoginResult = { error: string } | never;
 
@@ -17,17 +17,17 @@ export async function login(_prevState: { error: string } | null, formData: Form
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return { error: "No account found with that email." };
+  // Same message for unknown email and wrong password, so emails can't be probed.
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    return { error: "Incorrect email or password." };
   }
-
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) {
-    return { error: "Incorrect password." };
+  if (!canSignIn(user.role)) {
+    return { error: "This account type is not enabled. Please contact the owner." };
   }
 
   await createSession({ userId: user.id, role: user.role, name: user.name, email: user.email });
 
-  const destination = next && next.startsWith("/") ? next : homeForRole(user.role);
+  // Only allow redirects back into the app (blocks "//other-site.com" style redirects).
+  const destination = next.startsWith("/admin") ? next : homeForRole(user.role);
   redirect(destination);
 }

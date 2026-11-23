@@ -1,49 +1,35 @@
 import { prisma } from "@/lib/db";
 import { todayRangeUTC } from "@/lib/date-range";
-import { getSpendByProject } from "@/lib/project-costs";
-import { ProjectStatus, Role } from "@prisma/client";
+import { getSpendByProject, getSupplierBalances } from "@/lib/project-costs";
 
-export async function getAdminDashboardData() {
-  const today = todayRangeUTC();
+export async function getHomeData() {
+  const projects = await prisma.project.findMany({
+    where: { archived: false },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, name: true, siteAddress: true, clientName: true, status: true, overallProgress: true, budget: true },
+  });
+  const ids = projects.map((p) => p.id);
 
-  const [activeSupervisors, todaysAttendance, todaysExpenses, todaysPurchases, projects] = await Promise.all([
-    prisma.user.count({ where: { role: Role.SUPERVISOR } }),
-    prisma.workerAttendance.findMany({ where: { date: today }, select: { status: true, wageAmount: true } }),
-    prisma.expense.aggregate({ where: { date: today }, _sum: { amount: true } }),
-    prisma.purchase.aggregate({ where: { date: today }, _sum: { totalAmount: true } }),
-    prisma.project.findMany({
-      where: { archived: false },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, siteAddress: true, status: true, overallProgress: true, budget: true },
-    }),
+  const [allTime, today, suppliers] = await Promise.all([
+    getSpendByProject(ids),
+    getSpendByProject(ids, todayRangeUTC()),
+    getSupplierBalances(),
   ]);
 
-  const spend = await getSpendByProject(projects.map((p) => p.id));
-  const projectRows = projects.map((p) => {
-    const spent = spend.get(p.id)!.total;
-    return { ...p, spent, remaining: p.budget - spent };
+  const rows = projects.map((p) => {
+    const spent = allTime.get(p.id)!.total;
+    return { ...p, spent, balance: p.budget - spent, today: today.get(p.id)! };
   });
 
-  const ongoingProjects = projectRows.filter((p) => p.status !== ProjectStatus.COMPLETED);
-  const completedProjects = projectRows.filter((p) => p.status === ProjectStatus.COMPLETED);
-
-  const todaysLabourCount = todaysAttendance.filter((a) => a.status !== "ABSENT").length;
-  const todaysLabourCost = todaysAttendance.reduce((sum, a) => sum + a.wageAmount, 0);
-  const todaysMaterialCost = todaysPurchases._sum.totalAmount ?? 0;
-  const todaysOtherExpenses = todaysExpenses._sum.amount ?? 0;
+  const sum = (pick: (s: { labour: number; material: number; other: number; total: number }) => number) =>
+    [...today.values()].reduce((s, t) => s + pick(t), 0);
 
   return {
-    totalProjects: projectRows.length,
-    ongoingCount: ongoingProjects.length,
-    completedCount: completedProjects.length,
-    delayedCount: projectRows.filter((p) => p.status === ProjectStatus.DELAYED).length,
-    activeSupervisors,
-    todaysLabourCount,
-    todaysLabourCost,
-    todaysMaterialCost,
-    todaysOtherExpenses,
-    todaysTotalSpending: todaysLabourCost + todaysMaterialCost + todaysOtherExpenses,
-    ongoingProjects,
-    completedProjects,
+    ongoing: rows.filter((p) => p.status !== "COMPLETED"),
+    completed: rows.filter((p) => p.status === "COMPLETED"),
+    today: { labour: sum((t) => t.labour), material: sum((t) => t.material), other: sum((t) => t.other), total: sum((t) => t.total) },
+    supplierPending: suppliers.reduce((s, x) => s + Math.max(0, x.pending), 0),
   };
 }
+
+export type HomeProject = Awaited<ReturnType<typeof getHomeData>>["ongoing"][number];

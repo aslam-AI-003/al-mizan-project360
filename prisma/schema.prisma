@@ -131,6 +131,7 @@ model Project {
   inventoryTxns  InventoryTransaction[]
   purchases      Purchase[]
   expenses       Expense[]
+  labourEntries  LabourEntry[]
   dailyReports   DailyReport[]
   photos         ProjectPhoto[]
   progressStages ProgressStage[]
@@ -218,25 +219,64 @@ model InventoryTransaction {
   transferProjectId String?
 }
 
-/// A material bought for a site. Recorded directly by the supervisor (no approval step);
-/// it adds to site stock and counts as that day's material charge.
+/// A material bought for a site, entered in the Daily Entry. It adds to site
+/// stock and counts as that day's material charge. Bought on credit unless a
+/// SupplierPayment covers it — supplier pending = purchases − payments.
 model Purchase {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   projectId    String
-  project      Project  @relation(fields: [projectId], references: [id])
+  project      Project   @relation(fields: [projectId], references: [id])
   materialId   String
-  material     Material @relation(fields: [materialId], references: [id])
+  material     Material  @relation(fields: [materialId], references: [id])
   quantity     Float
   unit         String
   rate         Float
   totalAmount  Float
   date         DateTime
+  supplierId   String?
+  supplier     Supplier? @relation(fields: [supplierId], references: [id])
+  /// Deprecated: replaced by supplierId. Kept so older deployments keep working during rollout.
   vendorName   String?
   billPhotoUrl String?
   remarks      String?
   createdById  String
-  createdBy    User     @relation(fields: [createdById], references: [id])
-  createdAt    DateTime @default(now())
+  createdBy    User      @relation(fields: [createdById], references: [id])
+  createdAt    DateTime  @default(now())
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  phone     String?
+  createdAt DateTime @default(now())
+
+  purchases Purchase[]
+  payments  SupplierPayment[]
+}
+
+model SupplierPayment {
+  id         String      @id @default(cuid())
+  supplierId String
+  supplier   Supplier    @relation(fields: [supplierId], references: [id])
+  amount     Float
+  date       DateTime
+  mode       PaymentMode
+  note       String?
+  createdAt  DateTime    @default(now())
+}
+
+/// One day's labour charge for a project, without worker names.
+model LabourEntry {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  date      DateTime
+  workers   Int
+  amount    Float
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([projectId, date])
 }
 
 model Expense {

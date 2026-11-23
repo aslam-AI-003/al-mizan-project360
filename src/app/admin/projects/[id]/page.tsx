@@ -1,59 +1,39 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Archive } from "lucide-react";
+import { ArrowLeft, Archive, ClipboardPlus } from "lucide-react";
+import { prisma } from "@/lib/db";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { TabsNav } from "@/components/tabs-nav";
 import { formatINR } from "@/lib/format";
-import { getProjectSpend, getDailyLedger } from "@/lib/project-costs";
-import {
-  getProjectHeader,
-  getProgressData,
-  getDailyUpdatesData,
-  getLabourData,
-  getMaterialsData,
-  getPurchasesData,
-  getExpensesData,
-} from "./data";
+import { getProjectSpend, getDailyLedger, getMaterialSummary } from "@/lib/project-costs";
 import { OverviewTab } from "./tabs/overview";
-import { ProgressTab } from "./tabs/progress";
-import { DailyUpdatesTab } from "./tabs/daily-updates";
-import { LabourTab } from "./tabs/labour";
-import { MaterialsTab } from "./tabs/materials";
-import { PurchasesTab } from "./tabs/purchases";
-import { ExpensesTab } from "./tabs/expenses";
 import { LedgerTab } from "./tabs/ledger";
+import { MaterialsTab } from "./tabs/materials";
+import { SuppliersTab } from "./tabs/suppliers";
 import { archiveProject } from "./actions";
 
 const TABS = [
   { key: "overview", label: "Overview" },
-  { key: "progress", label: "Progress" },
-  { key: "daily-updates", label: "Daily Updates" },
-  { key: "labour", label: "Labour" },
+  { key: "ledger", label: "Day-by-Day" },
   { key: "materials", label: "Materials" },
-  { key: "purchases", label: "Material Purchases" },
-  { key: "expenses", label: "Expenses" },
-  { key: "ledger", label: "Budget Ledger" },
+  { key: "suppliers", label: "Suppliers" },
 ];
 
-export default async function ProjectDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const { id } = await params;
-  const { tab: rawTab } = await searchParams;
-  const tab = TABS.some((t) => t.key === rawTab) ? rawTab! : "overview";
+export default async function ProjectDetailPage(props: PageProps<"/admin/projects/[id]">) {
+  const { id } = await props.params;
+  const sp = await props.searchParams;
+  const tab = TABS.some((t) => t.key === sp.tab) ? String(sp.tab) : "overview";
 
-  const project = await getProjectHeader(id);
+  const project = await prisma.project.findUnique({ where: { id } });
   if (!project) notFound();
+  const spend = await getProjectSpend(id);
+  const balance = project.budget - spend.total;
 
   return (
     <div className="space-y-5">
       <div>
-        <Link href="/admin/projects" className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-black/50 hover:text-black/70">
+        <Link href="/admin" className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-black/50 hover:text-black/70">
           <ArrowLeft size={14} /> All Projects
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -64,11 +44,10 @@ export default async function ProjectDetailPage({
             </div>
             <p className="text-sm text-black/50">{project.siteAddress}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-xs text-black/40">Budget</p>
-              <p className="text-sm font-bold text-[var(--foreground)]">{formatINR(project.budget)}</p>
-            </div>
+          <div className="flex items-center gap-2">
+            <Link href={`/admin/entry?project=${project.id}`} className="btn-gold btn-sm">
+              <ClipboardPlus size={14} /> Daily Entry
+            </Link>
             {!project.archived && (
               <form action={archiveProject}>
                 <input type="hidden" name="projectId" value={project.id} />
@@ -79,70 +58,37 @@ export default async function ProjectDetailPage({
             )}
           </div>
         </div>
-        <div className="mt-3 max-w-md">
+        <div className="mt-4 grid grid-cols-3 gap-3 sm:max-w-lg">
+          <div>
+            <p className="text-xs text-black/40">Budget</p>
+            <p className="text-sm font-bold">{formatINR(project.budget)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-black/40">Spent</p>
+            <p className="text-sm font-bold">{formatINR(spend.total)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-black/40">Balance</p>
+            <p className={`text-sm font-bold ${balance < 0 ? "text-[var(--status-danger)]" : "text-[var(--status-success)]"}`}>{formatINR(balance)}</p>
+          </div>
+        </div>
+        <div className="mt-3 max-w-lg">
           <ProgressBar value={project.overallProgress} />
+          <p className="mt-1 text-xs text-black/40">Work progress {project.overallProgress}%</p>
         </div>
       </div>
 
       <TabsNav tabs={TABS} />
 
-      <TabContent tab={tab} projectId={id} project={project} />
+      {tab === "ledger" ? (
+        <LedgerTab project={project} spend={spend} days={await getDailyLedger(id, project.budget)} />
+      ) : tab === "materials" ? (
+        <MaterialsTab materials={await getMaterialSummary(id)} />
+      ) : tab === "suppliers" ? (
+        <SuppliersTab projectId={id} />
+      ) : (
+        <OverviewTab project={project} spend={spend} />
+      )}
     </div>
   );
-}
-
-async function TabContent({
-  tab,
-  projectId,
-  project,
-}: {
-  tab: string;
-  projectId: string;
-  project: NonNullable<Awaited<ReturnType<typeof getProjectHeader>>>;
-}) {
-  switch (tab) {
-    case "progress": {
-      const stages = await getProgressData(projectId);
-      return <ProgressTab projectId={projectId} stages={stages} />;
-    }
-    case "daily-updates": {
-      const reports = await getDailyUpdatesData(projectId);
-      return <DailyUpdatesTab reports={reports} />;
-    }
-    case "labour": {
-      const [workers, attendance, payments] = await getLabourData(projectId);
-      return <LabourTab projectId={projectId} workers={workers} attendance={attendance} payments={payments} />;
-    }
-    case "materials": {
-      const [inventory, transactions, materials, otherProjects] = await getMaterialsData(projectId);
-      return (
-        <MaterialsTab
-          projectId={projectId}
-          inventory={inventory}
-          transactions={transactions}
-          materials={materials}
-          otherProjects={otherProjects}
-        />
-      );
-    }
-    case "purchases": {
-      const purchases = await getPurchasesData(projectId);
-      return <PurchasesTab purchases={purchases} />;
-    }
-    case "expenses": {
-      const expenses = await getExpensesData(projectId);
-      return <ExpensesTab expenses={expenses} />;
-    }
-    case "ledger": {
-      const [spend, days] = await Promise.all([
-        getProjectSpend(projectId),
-        getDailyLedger(projectId, project.budget),
-      ]);
-      return <LedgerTab project={project} spend={spend} days={days} />;
-    }
-    default: {
-      const spend = await getProjectSpend(projectId);
-      return <OverviewTab project={project} spent={spend.total} />;
-    }
-  }
 }

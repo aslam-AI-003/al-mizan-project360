@@ -1,109 +1,135 @@
 import Link from "next/link";
-import { Building2, CheckCircle2, AlertTriangle, Users, HardHat } from "lucide-react";
-import { getAdminDashboardData } from "@/lib/dashboard-data";
-import { StatTile } from "@/components/stat-tile";
+import { Building2, Plus, ClipboardPlus } from "lucide-react";
+import { getHomeData, type HomeProject } from "@/lib/dashboard-data";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
+import { EmptyState } from "@/components/empty-state";
 import { formatINR } from "@/lib/format";
 
-type ProjectRow = Awaited<ReturnType<typeof getAdminDashboardData>>["ongoingProjects"][number];
-
-export default async function AdminDashboardPage() {
-  const data = await getAdminDashboardData();
+export default async function HomePage(props: PageProps<"/admin">) {
+  const sp = await props.searchParams;
+  const view = sp.view === "completed" ? "completed" : "ongoing";
+  const data = await getHomeData();
+  const list = view === "completed" ? data.completed : data.ongoing;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-[var(--foreground)]">Business Overview</h2>
-        <p className="text-sm text-black/50">Real-time snapshot across all sites.</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile label="Total Projects" value={String(data.totalProjects)} icon={Building2} tone="navy" />
-        <StatTile label="Ongoing" value={String(data.ongoingCount)} icon={HardHat} tone="info" />
-        <StatTile label="Completed" value={String(data.completedCount)} icon={CheckCircle2} tone="success" />
-        <StatTile label="Delayed" value={String(data.delayedCount)} icon={AlertTriangle} tone="danger" />
-        <StatTile label="Supervisors" value={String(data.activeSupervisors)} icon={HardHat} tone="gold" />
-        <StatTile label="Today's Labour" value={String(data.todaysLabourCount)} sublabel="workers on site" icon={Users} tone="info" />
-      </div>
-
-      <div className="card p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-[var(--foreground)]">Today&apos;s Spending (all sites)</h3>
-          <span className="text-xs text-black/40">
-            {new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" }).format(new Date())}
-          </span>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-[var(--foreground)]">Projects</h2>
+          <p className="text-sm text-black/50">
+            {data.ongoing.length} ongoing · {data.completed.length} completed
+          </p>
         </div>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <SummaryRow label="Labour" value={data.todaysLabourCost} />
-          <SummaryRow label="Material" value={data.todaysMaterialCost} />
-          <SummaryRow label="Other Expenses" value={data.todaysOtherExpenses} />
-          <SummaryRow label="Total" value={data.todaysTotalSpending} emphasize />
+        <div className="flex gap-2">
+          <Link href="/admin/entry" className="btn-gold btn-sm">
+            <ClipboardPlus size={16} /> Daily Entry
+          </Link>
+          <Link href="/admin/projects/new" className="btn-primary btn-sm">
+            <Plus size={16} /> New Project
+          </Link>
         </div>
       </div>
 
-      <ProjectBudgetTable title="Ongoing Projects" rows={data.ongoingProjects} empty="No ongoing projects." />
-      <ProjectBudgetTable title="Completed Projects" rows={data.completedProjects} empty="No completed projects yet." />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <Figure label="Today · Labour" value={data.today.labour} />
+        <Figure label="Today · Material" value={data.today.material} />
+        <Figure label="Today · Other" value={data.today.other} />
+        <Figure label="Today · Total" value={data.today.total} strong />
+        <Link href="/admin/suppliers" className="card col-span-2 p-4 transition hover:border-brand-navy/20 md:col-span-1">
+          <p className="text-xs text-black/50">Supplier Pending</p>
+          <p className="text-lg font-bold text-[var(--status-warning)]">{formatINR(data.supplierPending)}</p>
+        </Link>
+      </div>
+
+      <div className="flex gap-2">
+        <Tab href="/admin" active={view === "ongoing"} label={`Ongoing (${data.ongoing.length})`} />
+        <Tab href="/admin?view=completed" active={view === "completed"} label={`Completed (${data.completed.length})`} />
+      </div>
+
+      {list.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title={view === "completed" ? "No completed projects" : "No ongoing projects"}
+          description={view === "ongoing" ? "Create a project to start tracking its budget." : undefined}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {list.map((p) => (
+            <ProjectCard key={p.id} p={p} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function ProjectBudgetTable({ title, rows, empty }: { title: string; rows: ProjectRow[]; empty: string }) {
+function ProjectCard({ p }: { p: HomeProject }) {
+  const usedPct = p.budget > 0 ? Math.min(100, Math.round((p.spent / p.budget) * 100)) : 0;
+  const over = p.balance < 0;
   return (
-    <div>
-      <h3 className="mb-3 text-sm font-bold text-[var(--foreground)]">
-        {title} <span className="font-normal text-black/40">({rows.length})</span>
-      </h3>
-      <div className="card overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-black/5 text-xs font-semibold text-black/50">
-              <th className="px-4 py-3">Project</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Progress</th>
-              <th className="px-4 py-3 text-right">Budget</th>
-              <th className="px-4 py-3 text-right">Spent</th>
-              <th className="px-4 py-3 text-right">Remaining</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-black/5">
-            {rows.map((p) => (
-              <tr key={p.id} className="transition hover:bg-black/[0.02]">
-                <td className="px-4 py-3">
-                  <Link href={`/admin/projects/${p.id}?tab=ledger`} className="block">
-                    <p className="font-semibold text-[var(--foreground)]">{p.name}</p>
-                    <p className="text-xs text-black/50">{p.siteAddress}</p>
-                  </Link>
-                </td>
-                <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <ProgressBar value={p.overallProgress} className="w-20" />
-                    <span className="text-xs font-semibold text-black/60">{p.overallProgress}%</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right text-black/70">{formatINR(p.budget)}</td>
-                <td className="px-4 py-3 text-right text-black/70">{formatINR(p.spent)}</td>
-                <td className={`px-4 py-3 text-right font-semibold ${p.remaining < 0 ? "text-[var(--status-danger)]" : "text-[var(--status-success)]"}`}>
-                  {formatINR(p.remaining)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {rows.length === 0 && <p className="p-4 text-sm text-black/40">{empty}</p>}
+    <div className="card p-4">
+      <Link href={`/admin/projects/${p.id}`} className="block">
+        <div className="mb-1 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate font-bold text-[var(--foreground)]">{p.name}</p>
+            <p className="truncate text-xs text-black/50">{p.clientName ? `${p.clientName} · ` : ""}{p.siteAddress}</p>
+          </div>
+          <StatusBadge status={p.status} />
+        </div>
+
+        <div className="my-3 grid grid-cols-3 gap-2 text-sm">
+          <div>
+            <p className="text-xs text-black/50">Budget</p>
+            <p className="font-semibold">{formatINR(p.budget)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-black/50">Spent</p>
+            <p className="font-semibold">{formatINR(p.spent)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-black/50">Balance</p>
+            <p className={`font-bold ${over ? "text-[var(--status-danger)]" : "text-[var(--status-success)]"}`}>{formatINR(p.balance)}</p>
+          </div>
+        </div>
+
+        <ProgressBar value={usedPct} barClassName={over ? "bg-[var(--status-danger)]" : undefined} />
+        <div className="mt-1 flex justify-between text-xs text-black/40">
+          <span>{usedPct}% of budget used</span>
+          <span>Work progress {p.overallProgress}%</span>
+        </div>
+      </Link>
+
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-black/5 pt-3">
+        <p className="text-xs text-black/50">
+          Today: Labour {formatINR(p.today.labour)} · Material {formatINR(p.today.material)}
+        </p>
+        <Link href={`/admin/entry?project=${p.id}`} className="btn-outline btn-sm shrink-0">
+          <ClipboardPlus size={14} /> Entry
+        </Link>
       </div>
     </div>
   );
 }
 
-function SummaryRow({ label, value, emphasize }: { label: string; value: number; emphasize?: boolean }) {
+function Figure({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
   return (
-    <div>
+    <div className="card p-4">
       <p className="text-xs text-black/50">{label}</p>
-      <p className={emphasize ? "text-lg font-bold text-brand-gold" : "text-base font-semibold text-[var(--foreground)]"}>
-        {formatINR(value)}
-      </p>
+      <p className={`text-lg font-bold ${strong ? "text-brand-gold" : "text-[var(--foreground)]"}`}>{formatINR(value)}</p>
     </div>
+  );
+}
+
+function Tab({ href, active, label }: { href: string; active: boolean; label: string }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+        active ? "bg-brand-navy text-white" : "bg-white text-black/60 hover:bg-black/[0.04]"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
