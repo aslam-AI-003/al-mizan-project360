@@ -10,7 +10,6 @@ export default async function AdminProjectsPage() {
   const projects = await prisma.project.findMany({
     where: { archived: false },
     orderBy: { createdAt: "desc" },
-    include: { client: { select: { name: true } } },
   });
 
   return (
@@ -44,7 +43,7 @@ export default async function AdminProjectsPage() {
                   </div>
                   <StatusBadge status={project.status} />
                 </div>
-                <p className="mb-3 text-xs text-black/50">Client: {project.client.name}</p>
+                <p className="mb-3 text-xs text-black/50">Client: {project.clientName}</p>
                 <div className="mb-1 flex items-center justify-between text-xs text-black/50">
                   <span>Progress</span>
                   <span className="font-semibold text-[var(--foreground)]">{project.overallProgress}%</span>
@@ -76,7 +75,7 @@ export default async function AdminProjectsPage() {
                         <p className="text-xs text-black/50">{project.siteAddress}</p>
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-black/70">{project.client.name}</td>
+                    <td className="px-4 py-3 text-black/70">{project.clientName}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={project.status} />
                     </td>

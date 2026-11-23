@@ -31,7 +31,6 @@ export default async function LoginPage({
             <ul className="space-y-1">
               <li><span className="text-white/50">Admin:</span> admin@almizan.demo</li>
               <li><span className="text-white/50">Supervisor:</span> supervisor@almizan.demo</li>
-              <li><span className="text-white/50">Client:</span> client@almizan.demo</li>
               <li className="pt-1 text-white/50">Password for all: <span className="text-white">Almizan@123</span></li>
             </ul>
           </div>

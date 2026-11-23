@@ -5,18 +5,10 @@ import { updateProject } from "../actions";
 import type { Prisma } from "@prisma/client";
 
 type ProjectWithRelations = Prisma.ProjectGetPayload<{
-  include: { client: true; supervisors: { include: { supervisor: true } } };
+  include: { supervisors: { include: { supervisor: true } } };
 }>;
 
-export function OverviewTab({
-  project,
-  boqCount,
-  openIssueCount,
-}: {
-  project: ProjectWithRelations;
-  boqCount: number;
-  openIssueCount: number;
-}) {
+export function OverviewTab({ project, spent }: { project: ProjectWithRelations; spent: number }) {
   const toInputDate = (d: Date) => new Date(d).toISOString().slice(0, 10);
 
   return (
@@ -54,7 +46,11 @@ export function OverviewTab({
               <label className="label">Expected Completion</label>
               <input type="date" name="expectedCompletionDate" defaultValue={toInputDate(project.expectedCompletionDate)} className="input" />
             </div>
-            <div className="sm:col-span-2">
+            <div>
+              <label className="label">Client Name</label>
+              <input type="text" name="clientName" required defaultValue={project.clientName} className="input" />
+            </div>
+            <div>
               <label className="label">Project Manager</label>
               <input type="text" name="projectManager" defaultValue={project.projectManager ?? ""} className="input" />
             </div>
@@ -72,15 +68,19 @@ export function OverviewTab({
           <h3 className="mb-3 text-sm font-bold text-[var(--foreground)]">At a Glance</h3>
           <div className="space-y-3 text-sm">
             <Row label="Status"><StatusBadge status={project.status} /></Row>
-            <Row label="Client">{project.client.name}</Row>
+            <Row label="Client">{project.clientName || "—"}</Row>
             <Row label="Supervisor(s)">{project.supervisors.map((s) => s.supervisor.name).join(", ") || "—"}</Row>
             <Row label="Site Address">{project.siteAddress}</Row>
             <Row label="Start Date">{formatDate(project.startDate)}</Row>
             <Row label="Expected Completion">{formatDate(project.expectedCompletionDate)}</Row>
             <Row label="Contract Value">{formatINR(project.contractValue)}</Row>
             <Row label="Budget">{formatINR(project.budget)}</Row>
-            <Row label="Open BOQ Items">{boqCount}</Row>
-            <Row label="Open Issues">{openIssueCount}</Row>
+            <Row label="Spent So Far">{formatINR(spent)}</Row>
+            <Row label="Budget Remaining">
+              <span className={project.budget - spent < 0 ? "text-[var(--status-danger)]" : "text-[var(--status-success)]"}>
+                {formatINR(project.budget - spent)}
+              </span>
+            </Row>
           </div>
           <div className="mt-4">
             <p className="mb-1 text-xs text-black/50">Overall Progress</p>

@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionToken, SESSION_COOKIE_NAME, homeForRole } from "@/lib/auth";
 
-const ROLE_PREFIX: Record<string, "ADMIN" | "SUPERVISOR" | "CLIENT"> = {
+const ROLE_PREFIX: Record<string, "ADMIN" | "SUPERVISOR"> = {
   "/admin": "ADMIN",
   "/supervisor": "SUPERVISOR",
-  "/client": "CLIENT",
 };
 
 export async function proxy(request: NextRequest) {
@@ -34,5 +33,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/supervisor/:path*", "/client/:path*", "/login"],
+  matcher: ["/admin/:path*", "/supervisor/:path*", "/login"],
 };

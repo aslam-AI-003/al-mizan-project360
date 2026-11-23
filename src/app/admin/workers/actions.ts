@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { logAudit } from "@/lib/audit";
 import { WorkerType } from "@prisma/client";
 
 async function requireAdmin() {
@@ -24,7 +23,7 @@ async function nextWorkerCode() {
 }
 
 export async function createWorker(formData: FormData) {
-  const session = await requireAdmin();
+  await requireAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
   const mobile = String(formData.get("mobile") ?? "").trim();
@@ -39,7 +38,7 @@ export async function createWorker(formData: FormData) {
 
   const workerCode = await nextWorkerCode();
 
-  const worker = await prisma.worker.create({
+  await prisma.worker.create({
     data: {
       workerCode,
       name,
@@ -51,19 +50,12 @@ export async function createWorker(formData: FormData) {
     },
   });
 
-  await logAudit({
-    userId: session.userId,
-    action: "CREATE",
-    entityType: "Worker",
-    entityId: worker.id,
-    description: `Admin ${session.name} added worker ${worker.name} (${worker.workerCode})`,
-  });
 
   revalidatePath("/admin/workers");
 }
 
 export async function toggleWorkerStatus(formData: FormData) {
-  const session = await requireAdmin();
+  await requireAdmin();
   const workerId = String(formData.get("workerId") ?? "");
   const worker = await prisma.worker.findUnique({ where: { id: workerId } });
   if (!worker) return;
@@ -71,13 +63,6 @@ export async function toggleWorkerStatus(formData: FormData) {
   const nextStatus = worker.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
   await prisma.worker.update({ where: { id: workerId }, data: { status: nextStatus } });
 
-  await logAudit({
-    userId: session.userId,
-    action: "UPDATE",
-    entityType: "Worker",
-    entityId: worker.id,
-    description: `Admin ${session.name} marked worker ${worker.name} as ${nextStatus.toLowerCase()}`,
-  });
 
   revalidatePath("/admin/workers");
 }

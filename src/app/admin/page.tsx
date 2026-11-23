@@ -1,19 +1,12 @@
 import Link from "next/link";
-import {
-  Building2,
-  CheckCircle2,
-  AlertTriangle,
-  Users,
-  HardHat,
-  Wallet,
-  ClipboardCheck,
-  Package,
-  Truck,
-  Boxes,
-} from "lucide-react";
+import { Building2, CheckCircle2, AlertTriangle, Users, HardHat } from "lucide-react";
 import { getAdminDashboardData } from "@/lib/dashboard-data";
 import { StatTile } from "@/components/stat-tile";
+import { StatusBadge } from "@/components/status-badge";
+import { ProgressBar } from "@/components/progress-bar";
 import { formatINR } from "@/lib/format";
+
+type ProjectRow = Awaited<ReturnType<typeof getAdminDashboardData>>["ongoingProjects"][number];
 
 export default async function AdminDashboardPage() {
   const data = await getAdminDashboardData();
@@ -27,75 +20,78 @@ export default async function AdminDashboardPage() {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile label="Total Projects" value={String(data.totalProjects)} icon={Building2} tone="navy" />
-        <StatTile label="Active Projects" value={String(data.activeProjects)} icon={HardHat} tone="info" />
-        <StatTile label="Completed" value={String(data.completedProjects)} icon={CheckCircle2} tone="success" />
-        <StatTile label="Delayed" value={String(data.delayedProjects)} icon={AlertTriangle} tone="danger" />
-        <StatTile label="Total Clients" value={String(data.totalClients)} icon={Users} tone="navy" />
-        <StatTile label="Active Supervisors" value={String(data.activeSupervisors)} icon={HardHat} tone="gold" />
+        <StatTile label="Ongoing" value={String(data.ongoingCount)} icon={HardHat} tone="info" />
+        <StatTile label="Completed" value={String(data.completedCount)} icon={CheckCircle2} tone="success" />
+        <StatTile label="Delayed" value={String(data.delayedCount)} icon={AlertTriangle} tone="danger" />
+        <StatTile label="Supervisors" value={String(data.activeSupervisors)} icon={HardHat} tone="gold" />
         <StatTile label="Today's Labour" value={String(data.todaysLabourCount)} sublabel="workers on site" icon={Users} tone="info" />
-        <StatTile label="Pending Approvals" value={String(data.pendingApprovals)} icon={ClipboardCheck} tone="warning" />
       </div>
 
       <div className="card p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-[var(--foreground)]">Today&apos;s Business Summary</h3>
+          <h3 className="text-sm font-bold text-[var(--foreground)]">Today&apos;s Spending (all sites)</h3>
           <span className="text-xs text-black/40">
             {new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" }).format(new Date())}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <SummaryRow label="Labour Cost" value={data.todaysLabourCost} />
-          <SummaryRow label="Material Purchase" value={data.todaysMaterialPurchase} />
+          <SummaryRow label="Labour" value={data.todaysLabourCost} />
+          <SummaryRow label="Material" value={data.todaysMaterialCost} />
           <SummaryRow label="Other Expenses" value={data.todaysOtherExpenses} />
-          <SummaryRow label="Total Site Spending" value={data.todaysTotalSpending} emphasize />
+          <SummaryRow label="Total" value={data.todaysTotalSpending} emphasize />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <Link href="/admin/reports" className="card p-4 transition hover:border-brand-navy/20">
-          <div className="mb-2 flex items-center gap-2 text-[var(--status-warning)]">
-            <Wallet size={16} />
-            <p className="text-xs font-semibold">Pending Client Payments</p>
-          </div>
-          <p className="text-xl font-bold text-[var(--foreground)]">{formatINR(data.pendingClientPayments)}</p>
-        </Link>
-        <Link href="/admin/suppliers" className="card p-4 transition hover:border-brand-navy/20">
-          <div className="mb-2 flex items-center gap-2 text-[var(--status-danger)]">
-            <Truck size={16} />
-            <p className="text-xs font-semibold">Supplier Outstanding</p>
-          </div>
-          <p className="text-xl font-bold text-[var(--foreground)]">{formatINR(data.supplierOutstanding)}</p>
-        </Link>
-        <Link href="/admin/more" className="card p-4 transition hover:border-brand-navy/20">
-          <div className="mb-2 flex items-center gap-2 text-[var(--status-info)]">
-            <Boxes size={16} />
-            <p className="text-xs font-semibold">Low Stock Alerts</p>
-          </div>
-          <p className="text-xl font-bold text-[var(--foreground)]">{data.lowStockCount} materials</p>
-        </Link>
-      </div>
+      <ProjectBudgetTable title="Ongoing Projects" rows={data.ongoingProjects} empty="No ongoing projects." />
+      <ProjectBudgetTable title="Completed Projects" rows={data.completedProjects} empty="No completed projects yet." />
+    </div>
+  );
+}
 
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-[var(--foreground)]">Latest Site Photos</h3>
-          <Link href="/admin/projects" className="text-xs font-semibold text-brand-navy">View projects →</Link>
-        </div>
-        <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
-          {data.recentPhotos.map((photo) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={photo.id}
-              src={photo.url}
-              alt={photo.caption}
-              className="aspect-square w-full rounded-xl object-cover"
-            />
-          ))}
-        </div>
-        {data.recentPhotos.length === 0 && (
-          <div className="flex items-center gap-2 text-sm text-black/40">
-            <Package size={16} /> No photos uploaded yet.
-          </div>
-        )}
+function ProjectBudgetTable({ title, rows, empty }: { title: string; rows: ProjectRow[]; empty: string }) {
+  return (
+    <div>
+      <h3 className="mb-3 text-sm font-bold text-[var(--foreground)]">
+        {title} <span className="font-normal text-black/40">({rows.length})</span>
+      </h3>
+      <div className="card overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-black/5 text-xs font-semibold text-black/50">
+              <th className="px-4 py-3">Project</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Progress</th>
+              <th className="px-4 py-3 text-right">Budget</th>
+              <th className="px-4 py-3 text-right">Spent</th>
+              <th className="px-4 py-3 text-right">Remaining</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-black/5">
+            {rows.map((p) => (
+              <tr key={p.id} className="transition hover:bg-black/[0.02]">
+                <td className="px-4 py-3">
+                  <Link href={`/admin/projects/${p.id}?tab=ledger`} className="block">
+                    <p className="font-semibold text-[var(--foreground)]">{p.name}</p>
+                    <p className="text-xs text-black/50">{p.siteAddress}</p>
+                  </Link>
+                </td>
+                <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <ProgressBar value={p.overallProgress} className="w-20" />
+                    <span className="text-xs font-semibold text-black/60">{p.overallProgress}%</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right text-black/70">{formatINR(p.budget)}</td>
+                <td className="px-4 py-3 text-right text-black/70">{formatINR(p.spent)}</td>
+                <td className={`px-4 py-3 text-right font-semibold ${p.remaining < 0 ? "text-[var(--status-danger)]" : "text-[var(--status-success)]"}`}>
+                  {formatINR(p.remaining)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 && <p className="p-4 text-sm text-black/40">{empty}</p>}
       </div>
     </div>
   );

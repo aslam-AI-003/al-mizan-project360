@@ -70,7 +70,5 @@ export function homeForRole(role: Role) {
       return "/admin";
     case "SUPERVISOR":
       return "/supervisor";
-    case "CLIENT":
-      return "/client";
   }
 }

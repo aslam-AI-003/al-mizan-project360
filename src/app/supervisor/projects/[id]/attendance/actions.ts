@@ -4,21 +4,17 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { AttendanceStatus } from "@prisma/client";
-import { logAudit } from "@/lib/audit";
 import { requireSupervisorSession, requireAssignedProject } from "@/lib/supervisor-guard";
 import { todayRangeUTC } from "@/lib/date-range";
-import { formatINR } from "@/lib/format";
 
 export async function submitAttendance(formData: FormData) {
   const session = await requireSupervisorSession();
   const projectId = String(formData.get("projectId") ?? "");
-  const project = await requireAssignedProject(projectId, session.userId);
+  await requireAssignedProject(projectId, session.userId);
 
   const workers = await prisma.worker.findMany({ where: { projectId, status: "ACTIVE" } });
   const today = todayRangeUTC().gte;
 
-  let totalWage = 0;
-  let markedCount = 0;
 
   for (const worker of workers) {
     const statusRaw = String(formData.get(`status-${worker.id}`) ?? "");
@@ -33,8 +29,6 @@ export async function submitAttendance(formData: FormData) {
     else if (status === "HALF_DAY") wageAmount = worker.dailyWage / 2;
     else if (status === "OVERTIME") wageAmount = worker.dailyWage + (worker.dailyWage / 8) * overtimeHours;
 
-    totalWage += wageAmount;
-    markedCount += 1;
 
     await prisma.workerAttendance.upsert({
       where: { workerId_date: { workerId: worker.id, date: today } },
@@ -43,15 +37,10 @@ export async function submitAttendance(formData: FormData) {
     });
   }
 
-  await logAudit({
-    userId: session.userId,
-    action: "MARKED_ATTENDANCE",
-    entityType: "WORKER_ATTENDANCE",
-    entityId: projectId,
-    description: `${session.name} marked attendance for ${markedCount} worker(s) on ${project.name} — total wages ${formatINR(totalWage)}`,
-  });
 
   revalidatePath(`/supervisor/projects/${projectId}/attendance`);
   revalidatePath(`/supervisor/projects/${projectId}`);
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath("/admin");
   redirect(`/supervisor/projects/${projectId}`);
 }

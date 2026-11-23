@@ -1,4 +1,4 @@
-// Al-Mizan Project360 — Prisma schema (SQLite for local demo; swap provider to postgresql for production)
+// Al-Mizan Project360 — Prisma schema (PostgreSQL)
 
 generator client {
   provider = "prisma-client-js"
@@ -12,7 +12,6 @@ datasource db {
 enum Role {
   ADMIN
   SUPERVISOR
-  CLIENT
 }
 
 enum ProjectStatus {
@@ -47,12 +46,6 @@ enum AttendanceStatus {
   OVERTIME
 }
 
-enum PaymentStatus {
-  PENDING
-  PARTIALLY_PAID
-  PAID
-}
-
 enum PaymentMode {
   CASH
   UPI
@@ -67,15 +60,6 @@ enum InventoryTxnType {
   TRANSFER_OUT
 }
 
-enum PurchaseStatus {
-  DRAFT
-  SUBMITTED
-  APPROVED
-  REJECTED
-  PURCHASED
-  PAID
-}
-
 enum ExpenseCategory {
   TRANSPORT
   FOOD
@@ -88,63 +72,11 @@ enum ExpenseCategory {
   OTHER
 }
 
-enum ExpenseStatus {
-  SUBMITTED
-  APPROVED
-  REJECTED
-}
-
-enum DailyReportStatus {
-  DRAFT
-  SUBMITTED
-  APPROVED
-  REJECTED
-}
-
 enum StageStatus {
   NOT_STARTED
   IN_PROGRESS
   COMPLETED
   DELAYED
-}
-
-enum IssuePriority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum IssueStatus {
-  OPEN
-  IN_PROGRESS
-  RESOLVED
-}
-
-enum MilestoneStatus {
-  PENDING
-  DUE
-  PAID
-}
-
-enum ApprovalType {
-  DAILY_REPORT
-  PURCHASE
-  EXPENSE
-  LABOUR_ADVANCE
-  SUPPLIER_PAYMENT
-}
-
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  SENT_BACK
-}
-
-enum BoqCategory {
-  MATERIAL
-  LABOUR
 }
 
 model User {
@@ -157,29 +89,20 @@ model User {
   avatarUrl    String?
   createdAt    DateTime @default(now())
 
-  clientProjects     Project[]            @relation("ProjectClient")
   supervisorProjects ProjectSupervisor[]
-  dailyReportsMade   DailyReport[]        @relation("DailyReportCreatedBy")
-  dailyReportsAcked  DailyReport[]        @relation("DailyReportApprovedBy")
+  dailyReportsMade   DailyReport[]
   photosUploaded     ProjectPhoto[]
-  purchasesRequested Purchase[]           @relation("PurchaseRequestedBy")
-  purchasesApproved  Purchase[]           @relation("PurchaseApprovedBy")
+  purchasesRecorded  Purchase[]
   expensesCreated    Expense[]
-  issuesReported     Issue[]              @relation("IssueReportedBy")
-  issuesAssigned     Issue[]              @relation("IssueAssignedTo")
-  notifications      Notification[]
-  approvalsActedOn   Approval[]
-  auditLogs          AuditLog[]
-  pettyCashEntries   PettyCash[]
 }
 
 model ProjectSupervisor {
-  id          String   @id @default(cuid())
-  projectId   String
+  id           String   @id @default(cuid())
+  projectId    String
   supervisorId String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  supervisor  User     @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supervisor   User     @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
 
   @@unique([projectId, supervisorId])
 }
@@ -189,8 +112,7 @@ model Project {
   name                   String
   siteAddress            String
   description            String?
-  clientId               String
-  client                 User          @relation("ProjectClient", fields: [clientId], references: [id])
+  clientName             String
   projectManager         String?
   budget                 Float
   contractValue          Float
@@ -201,70 +123,63 @@ model Project {
   archived               Boolean       @default(false)
   createdAt              DateTime      @default(now())
 
-  supervisors        ProjectSupervisor[]
-  workers            Worker[]
-  attendance         WorkerAttendance[]
-  workerPayments     WorkerPayment[]
-  inventory          Inventory[]
-  inventoryTxns      InventoryTransaction[]
-  purchases          Purchase[]
-  supplierPayments   SupplierPayment[]
-  expenses           Expense[]
-  pettyCash          PettyCash[]
-  dailyReports       DailyReport[]
-  photos             ProjectPhoto[]
-  progressStages     ProgressStage[]
-  documents          ProjectDocument[]
-  paymentMilestones  PaymentMilestone[]
-  clientPayments     ClientPayment[]
-  boqItems           BoqItem[]
-  issues             Issue[]
+  supervisors    ProjectSupervisor[]
+  workers        Worker[]
+  attendance     WorkerAttendance[]
+  workerPayments WorkerPayment[]
+  inventory      Inventory[]
+  inventoryTxns  InventoryTransaction[]
+  purchases      Purchase[]
+  expenses       Expense[]
+  dailyReports   DailyReport[]
+  photos         ProjectPhoto[]
+  progressStages ProgressStage[]
 }
 
 model Worker {
-  id           String       @id @default(cuid())
-  workerCode   String       @unique
-  name         String
-  mobile       String
-  workerType   WorkerType
-  dailyWage    Float
-  status       WorkerStatus @default(ACTIVE)
-  joiningDate  DateTime
-  projectId    String
-  project      Project      @relation(fields: [projectId], references: [id])
-  createdAt    DateTime     @default(now())
+  id          String       @id @default(cuid())
+  workerCode  String       @unique
+  name        String
+  mobile      String
+  workerType  WorkerType
+  dailyWage   Float
+  status      WorkerStatus @default(ACTIVE)
+  joiningDate DateTime
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id])
+  createdAt   DateTime     @default(now())
 
   attendance WorkerAttendance[]
   payments   WorkerPayment[]
 }
 
 model WorkerAttendance {
-  id         String           @id @default(cuid())
-  workerId   String
-  worker     Worker           @relation(fields: [workerId], references: [id])
-  projectId  String
-  project    Project          @relation(fields: [projectId], references: [id])
-  date       DateTime
-  status     AttendanceStatus
-  overtimeHours Float         @default(0)
-  wageAmount Float
-  createdAt  DateTime         @default(now())
+  id            String           @id @default(cuid())
+  workerId      String
+  worker        Worker           @relation(fields: [workerId], references: [id])
+  projectId     String
+  project       Project          @relation(fields: [projectId], references: [id])
+  date          DateTime
+  status        AttendanceStatus
+  overtimeHours Float            @default(0)
+  wageAmount    Float
+  createdAt     DateTime         @default(now())
 
   @@unique([workerId, date])
 }
 
 model WorkerPayment {
-  id              String        @id @default(cuid())
+  id              String      @id @default(cuid())
   workerId        String
-  worker          Worker        @relation(fields: [workerId], references: [id])
+  worker          Worker      @relation(fields: [workerId], references: [id])
   projectId       String
-  project         Project       @relation(fields: [projectId], references: [id])
+  project         Project     @relation(fields: [projectId], references: [id])
   amount          Float
   paymentDate     DateTime
   mode            PaymentMode
   referenceNumber String?
   remarks         String?
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime    @default(now())
 }
 
 model Material {
@@ -276,7 +191,6 @@ model Material {
   inventory Inventory[]
   txns      InventoryTransaction[]
   purchases Purchase[]
-  boqItems  BoqItem[]
 }
 
 model Inventory {
@@ -292,69 +206,37 @@ model Inventory {
 }
 
 model InventoryTransaction {
-  id         String            @id @default(cuid())
-  projectId  String
-  project    Project           @relation(fields: [projectId], references: [id])
-  materialId String
-  material   Material          @relation(fields: [materialId], references: [id])
-  type       InventoryTxnType
-  quantity   Float
-  date       DateTime          @default(now())
-  notes      String?
+  id                String           @id @default(cuid())
+  projectId         String
+  project           Project          @relation(fields: [projectId], references: [id])
+  materialId        String
+  material          Material         @relation(fields: [materialId], references: [id])
+  type              InventoryTxnType
+  quantity          Float
+  date              DateTime         @default(now())
+  notes             String?
   transferProjectId String?
 }
 
-model Supplier {
-  id                 String   @id @default(cuid())
-  name               String
-  shopName           String
-  contactPerson      String
-  mobile             String
-  address            String
-  materialsSupplied  String
-  createdAt          DateTime @default(now())
-
-  purchases Purchase[]
-  payments  SupplierPayment[]
-}
-
+/// A material bought for a site. Recorded directly by the supervisor (no approval step);
+/// it adds to site stock and counts as that day's material charge.
 model Purchase {
-  id            String         @id @default(cuid())
-  projectId     String
-  project       Project        @relation(fields: [projectId], references: [id])
-  supplierId    String
-  supplier      Supplier       @relation(fields: [supplierId], references: [id])
-  materialId    String
-  material      Material       @relation(fields: [materialId], references: [id])
-  quantity      Float
-  unit          String
-  rate          Float
-  totalAmount   Float
-  requiredDate  DateTime
-  billPhotoUrl  String?
-  status        PurchaseStatus @default(DRAFT)
-  remarks       String?
-  requestedById String
-  requestedBy   User           @relation("PurchaseRequestedBy", fields: [requestedById], references: [id])
-  approvedById  String?
-  approvedBy    User?          @relation("PurchaseApprovedBy", fields: [approvedById], references: [id])
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-}
-
-model SupplierPayment {
-  id              String      @id @default(cuid())
-  supplierId      String
-  supplier        Supplier    @relation(fields: [supplierId], references: [id])
-  projectId       String
-  project         Project     @relation(fields: [projectId], references: [id])
-  invoiceNumber   String
-  invoiceAmount   Float
-  paidAmount      Float
-  paymentDate     DateTime
-  paymentMode     PaymentMode
-  referenceNumber String?
-  createdAt       DateTime    @default(now())
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id])
+  materialId   String
+  material     Material @relation(fields: [materialId], references: [id])
+  quantity     Float
+  unit         String
+  rate         Float
+  totalAmount  Float
+  date         DateTime
+  vendorName   String?
+  billPhotoUrl String?
+  remarks      String?
+  createdById  String
+  createdBy    User     @relation(fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
 }
 
 model Expense {
@@ -368,44 +250,27 @@ model Expense {
   paidBy          String
   paymentMode     PaymentMode
   receiptPhotoUrl String?
-  status          ExpenseStatus   @default(SUBMITTED)
   createdById     String
   createdBy       User            @relation(fields: [createdById], references: [id])
   createdAt       DateTime        @default(now())
 }
 
-model PettyCash {
-  id              String   @id @default(cuid())
-  projectId       String
-  project         Project  @relation(fields: [projectId], references: [id])
-  supervisorId    String
-  supervisor      User     @relation(fields: [supervisorId], references: [id])
-  openingBalance  Float
-  date            DateTime
-  settled         Boolean  @default(false)
-  createdAt       DateTime @default(now())
-}
-
 model DailyReport {
-  id                String            @id @default(cuid())
-  projectId         String
-  project           Project           @relation(fields: [projectId], references: [id])
-  date              DateTime
-  workCompleted     String
-  workCategory      String
+  id                 String   @id @default(cuid())
+  projectId          String
+  project            Project  @relation(fields: [projectId], references: [id])
+  date               DateTime
+  workCompleted      String
+  workCategory       String
   progressPercentage Int
-  workersCount      Int
-  materialsUsed     String
-  issues            String?
-  tomorrowPlan      String?
-  remarks           String?
-  status            DailyReportStatus @default(SUBMITTED)
-  createdById       String
-  createdBy         User              @relation("DailyReportCreatedBy", fields: [createdById], references: [id])
-  approvedById      String?
-  approvedBy        User?             @relation("DailyReportApprovedBy", fields: [approvedById], references: [id])
-  approvedAt        DateTime?
-  createdAt         DateTime          @default(now())
+  workersCount       Int
+  materialsUsed      String
+  issues             String?
+  tomorrowPlan       String?
+  remarks            String?
+  createdById        String
+  createdBy          User     @relation(fields: [createdById], references: [id])
+  createdAt          DateTime @default(now())
 
   photos ProjectPhoto[]
 }
@@ -425,121 +290,16 @@ model ProjectPhoto {
 }
 
 model ProgressStage {
-  id                String      @id @default(cuid())
-  projectId         String
-  project           Project     @relation(fields: [projectId], references: [id])
-  name              String
-  order             Int
-  plannedStart      DateTime
-  plannedEnd        DateTime
-  actualStart       DateTime?
-  actualEnd         DateTime?
-  progressPercentage Int        @default(0)
-  status            StageStatus @default(NOT_STARTED)
-  remarks           String?
-}
-
-model ProjectDocument {
-  id             String   @id @default(cuid())
-  projectId      String
-  project        Project  @relation(fields: [projectId], references: [id])
-  name           String
-  type           String
-  url            String
-  visibleToClient Boolean @default(false)
-  uploadedAt     DateTime @default(now())
-}
-
-model PaymentMilestone {
-  id              String          @id @default(cuid())
-  projectId       String
-  project         Project         @relation(fields: [projectId], references: [id])
-  name            String
-  amount          Float
-  dueDate         DateTime
-  status          MilestoneStatus @default(PENDING)
-  paidDate        DateTime?
-  referenceNumber String?
-  order           Int             @default(0)
-}
-
-model ClientPayment {
-  id              String   @id @default(cuid())
-  projectId       String
-  project         Project  @relation(fields: [projectId], references: [id])
-  amount          Float
-  date            DateTime
-  mode            PaymentMode
-  referenceNumber String?
-  remarks         String?
-  createdAt       DateTime @default(now())
-}
-
-model BoqItem {
-  id             String      @id @default(cuid())
-  projectId      String
-  project        Project     @relation(fields: [projectId], references: [id])
-  category       BoqCategory
-  itemName       String
-  materialId     String?
-  material       Material?   @relation(fields: [materialId], references: [id])
-  estimatedQty   Float
-  estimatedRate  Float
-  estimatedCost  Float
-  actualQty      Float       @default(0)
-  actualCost     Float       @default(0)
-}
-
-model Issue {
-  id           String        @id @default(cuid())
-  projectId    String
-  project      Project       @relation(fields: [projectId], references: [id])
-  title        String
-  description  String
-  priority     IssuePriority
-  photoUrl     String?
-  assignedToId String?
-  assignedTo   User?         @relation("IssueAssignedTo", fields: [assignedToId], references: [id])
-  reportedById String
-  reportedBy   User          @relation("IssueReportedBy", fields: [reportedById], references: [id])
-  status       IssueStatus   @default(OPEN)
-  resolution   String?
-  createdAt    DateTime      @default(now())
-  resolvedAt   DateTime?
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  type      String
-  title     String
-  message   String
-  link      String?
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-}
-
-model Approval {
-  id           String         @id @default(cuid())
-  type         ApprovalType
-  refId        String
-  refLabel     String
-  status       ApprovalStatus @default(PENDING)
-  comment      String?
-  actedById    String?
-  actedBy      User?          @relation(fields: [actedById], references: [id])
-  actedAt      DateTime?
-  createdAt    DateTime       @default(now())
-}
-
-model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  action      String
-  entityType  String
-  entityId    String
-  description String
-  createdAt   DateTime @default(now())
+  id                 String      @id @default(cuid())
+  projectId          String
+  project            Project     @relation(fields: [projectId], references: [id])
+  name               String
+  order              Int
+  plannedStart       DateTime
+  plannedEnd         DateTime
+  actualStart        DateTime?
+  actualEnd          DateTime?
+  progressPercentage Int         @default(0)
+  status             StageStatus @default(NOT_STARTED)
+  remarks            String?
 }

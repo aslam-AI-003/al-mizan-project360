@@ -5,13 +5,11 @@ import { usePathname } from "next/navigation";
 import {
   ADMIN_BOTTOM_NAV,
   SUPERVISOR_BOTTOM_NAV,
-  CLIENT_BOTTOM_NAV,
 } from "./nav-config";
 
 const NAV_BY_ROLE = {
   ADMIN: ADMIN_BOTTOM_NAV,
   SUPERVISOR: SUPERVISOR_BOTTOM_NAV,
-  CLIENT: CLIENT_BOTTOM_NAV,
 } as const;
 
 export function BottomNav({ role }: { role: keyof typeof NAV_BY_ROLE }) {
@@ -22,8 +20,8 @@ export function BottomNav({ role }: { role: keyof typeof NAV_BY_ROLE }) {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/5 bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)] md:hidden">
       <ul className="mx-auto flex max-w-lg items-stretch justify-between">
         {items.map((item) => {
-          const active = item.href === pathname || (item.href !== "/admin" && item.href !== "/supervisor" && item.href !== "/client" && pathname.startsWith(item.href));
-          const isExactHome = ["/admin", "/supervisor", "/client"].includes(item.href) && pathname === item.href;
+          const active = item.href === pathname || (item.href !== "/admin" && item.href !== "/supervisor" && pathname.startsWith(item.href));
+          const isExactHome = ["/admin", "/supervisor"].includes(item.href) && pathname === item.href;
           const isActive = active || isExactHome;
           const Icon = item.icon;
           return (

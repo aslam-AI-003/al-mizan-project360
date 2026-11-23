@@ -1,4 +1,4 @@
-import { PrismaClient, Role, WorkerType, ProjectStatus, AttendanceStatus, PaymentMode, PaymentStatus, PurchaseStatus, ExpenseCategory, ExpenseStatus, DailyReportStatus, StageStatus, IssuePriority, IssueStatus, MilestoneStatus, InventoryTxnType, ApprovalType, ApprovalStatus, BoqCategory } from "@prisma/client";
+import { PrismaClient, Role, WorkerType, ProjectStatus, AttendanceStatus, PaymentMode, ExpenseCategory, StageStatus, InventoryTxnType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -80,7 +80,7 @@ async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
   // ---------- Users ----------
-  const admin = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: "admin@almizan.demo",
       passwordHash,
@@ -106,47 +106,12 @@ async function main() {
   }
   const [abdul, yasin, karthik, sureshSup] = supervisors;
 
-  const clientDefs = [
-    { email: "client@almizan.demo", name: "Rajesh Kumar", phone: "+91 98410 33001" },
-    { email: "lakshmi.client@almizan.demo", name: "Lakshmi Narayanan", phone: "+91 98410 33002" },
-    { email: "venkatesh.client@almizan.demo", name: "Venkatesh Iyer", phone: "+91 98410 33003" },
-    { email: "fathima.client@almizan.demo", name: "Fathima Begum", phone: "+91 98410 33004" },
-    { email: "anitha.client@almizan.demo", name: "Anitha Raj", phone: "+91 98410 33005" },
-  ];
-  const clients = [];
-  for (const c of clientDefs) {
-    clients.push(
-      await prisma.user.create({
-        data: { ...c, passwordHash, role: Role.CLIENT },
-      })
-    );
-  }
-  const [rajesh, lakshmi, venkatesh, fathima, anitha] = clients;
-
   // ---------- Materials ----------
   const materials = [];
   for (const m of MATERIAL_DEFS) {
     materials.push(await prisma.material.create({ data: m }));
   }
-  const [cement, steel, bricks, sand, aggregate, electrical, plumbing, tiles, paint, hardware] = materials;
-
-  // ---------- Suppliers ----------
-  const supplierDefs = [
-    { name: "ABC Traders", shopName: "ABC Traders", contactPerson: "Mohan Das", mobile: "+91 90031 10001", address: "Anna Salai, Thanjavur", materialsSupplied: "Cement, Steel, Aggregate" },
-    { name: "Sri Balaji Hardware Mart", shopName: "Sri Balaji Hardware", contactPerson: "Balaji Raman", mobile: "+91 90031 10002", address: "Big Bazaar Street, Trichy", materialsSupplied: "Hardware, Fasteners, Tools" },
-    { name: "Tamil Nadu Cement Agency", shopName: "TN Cement Agency", contactPerson: "Selvaraj K", mobile: "+91 90031 10003", address: "GST Road, Chennai", materialsSupplied: "Cement" },
-    { name: "Chennai Steel Corporation", shopName: "Chennai Steel Corp", contactPerson: "Vignesh Rao", mobile: "+91 90031 10004", address: "Ambattur Industrial Estate, Chennai", materialsSupplied: "TMT Steel Bars" },
-    { name: "SPB Electricals", shopName: "SPB Electricals", contactPerson: "Prabhu S", mobile: "+91 90031 10005", address: "East Car Street, Madurai", materialsSupplied: "Electrical Wiring & Fittings" },
-    { name: "Kaveri Sand Suppliers", shopName: "Kaveri Sand Suppliers", contactPerson: "Muthu Kumar", mobile: "+91 90031 10006", address: "Kaveri Bank Road, Thanjavur", materialsSupplied: "River Sand, Aggregate" },
-    { name: "Madurai Tiles & Sanitary", shopName: "Madurai Tiles & Sanitary", contactPerson: "Ravichandran", mobile: "+91 90031 10007", address: "West Masi Street, Madurai", materialsSupplied: "Vitrified Tiles, Sanitaryware" },
-    { name: "Coimbatore Paints & Hardware", shopName: "CBE Paints & Hardware", contactPerson: "Kannan V", mobile: "+91 90031 10008", address: "Cross Cut Road, Coimbatore", materialsSupplied: "Paint, Hardware" },
-    { name: "Trichy Plumbing Solutions", shopName: "Trichy Plumbing Solutions", contactPerson: "Iqbal Ahmed", mobile: "+91 90031 10009", address: "Thillai Nagar, Trichy", materialsSupplied: "Plumbing Pipes & Fittings" },
-    { name: "Anna Nagar Building Materials", shopName: "Anna Nagar Building Materials", contactPerson: "Ganesh Babu", mobile: "+91 90031 10010", address: "Anna Nagar, Chennai", materialsSupplied: "Cement, Bricks, Aggregate" },
-  ];
-  const suppliers = [];
-  for (const s of supplierDefs) {
-    suppliers.push(await prisma.supplier.create({ data: s }));
-  }
+  const [cement, steel, bricks, sand, , , , tiles, paint] = materials;
 
   // ---------- Projects ----------
   const projectDefs = [
@@ -154,7 +119,7 @@ async function main() {
       name: "Ayyampettai Residence",
       siteAddress: "Plot 14, Ayyampettai Main Road, Thanjavur District, Tamil Nadu",
       description: "G+1 individual residence with modern elevation for the Kumar family.",
-      client: rajesh,
+      clientName: "Rajesh Kumar",
       supervisor: abdul,
       budget: 2300000,
       contractValue: 2500000,
@@ -167,7 +132,7 @@ async function main() {
       name: "Green Valley Apartments",
       siteAddress: "Survey No. 212, Mount Poonamallee Road, Porur, Chennai",
       description: "18-unit G+4 residential apartment complex with covered parking.",
-      client: lakshmi,
+      clientName: "Lakshmi Narayanan",
       supervisor: yasin,
       budget: 18000000,
       contractValue: 19500000,
@@ -180,7 +145,7 @@ async function main() {
       name: "Sri Ranga Commercial Complex",
       siteAddress: "Bharathidasan Salai, Srirangam, Trichy",
       description: "3-floor commercial complex with 12 retail units and rooftop signage.",
-      client: venkatesh,
+      clientName: "Venkatesh Iyer",
       supervisor: karthik,
       budget: 9500000,
       contractValue: 10200000,
@@ -193,7 +158,7 @@ async function main() {
       name: "Meenakshi Enclave Villas",
       siteAddress: "Alagar Koil Road, Madurai",
       description: "Gated community of 6 independent villas, phase 1.",
-      client: fathima,
+      clientName: "Fathima Begum",
       supervisor: sureshSup,
       budget: 7000000,
       contractValue: 7500000,
@@ -206,7 +171,7 @@ async function main() {
       name: "Coimbatore Tech Park Annex",
       siteAddress: "Avinashi Road, Coimbatore",
       description: "Annex block for an existing IT park campus — completed and handed over.",
-      client: anitha,
+      clientName: "Anitha Raj",
       supervisor: abdul,
       budget: 4200000,
       contractValue: 4500000,
@@ -224,7 +189,7 @@ async function main() {
         name: p.name,
         siteAddress: p.siteAddress,
         description: p.description,
-        clientId: p.client.id,
+        clientName: p.clientName,
         projectManager: "Ibrahim Al-Mizan",
         budget: p.budget,
         contractValue: p.contractValue,
@@ -237,7 +202,7 @@ async function main() {
     await prisma.projectSupervisor.create({
       data: { projectId: project.id, supervisorId: p.supervisor.id },
     });
-    projects.push({ ...project, supervisor: p.supervisor, client: p.client, overallProgress: p.overallProgress, startDate: p.startDate, expectedCompletionDate: p.expectedCompletionDate });
+    projects.push({ ...project, supervisor: p.supervisor, overallProgress: p.overallProgress, startDate: p.startDate, expectedCompletionDate: p.expectedCompletionDate });
   }
 
   // ---------- Progress stages per project ----------
@@ -280,38 +245,6 @@ async function main() {
           progressPercentage,
           status,
           remarks: status === StageStatus.IN_PROGRESS ? "Work in progress as per schedule." : null,
-        },
-      });
-    }
-  }
-
-  // ---------- BOQ ----------
-  for (const project of projects) {
-    const scale = project.budget / 2300000;
-    const boqRows: { category: BoqCategory; itemName: string; materialId?: string; estimatedQty: number; estimatedRate: number }[] = [
-      { category: BoqCategory.MATERIAL, itemName: "Cement", materialId: cement.id, estimatedQty: Math.round(600 * scale), estimatedRate: 380 },
-      { category: BoqCategory.MATERIAL, itemName: "Steel (TMT Bars)", materialId: steel.id, estimatedQty: Math.round(12000 * scale), estimatedRate: 62 },
-      { category: BoqCategory.MATERIAL, itemName: "Bricks", materialId: bricks.id, estimatedQty: Math.round(40000 * scale), estimatedRate: 8 },
-      { category: BoqCategory.MATERIAL, itemName: "Vitrified Tiles", materialId: tiles.id, estimatedQty: Math.round(4000 * scale), estimatedRate: 55 },
-      { category: BoqCategory.LABOUR, itemName: "Mason & Helper Labour", estimatedQty: Math.round(1800 * scale), estimatedRate: 850 },
-      { category: BoqCategory.LABOUR, itemName: "Electrical & Plumbing Labour", estimatedQty: Math.round(400 * scale), estimatedRate: 900 },
-    ];
-    for (const row of boqRows) {
-      const estimatedCost = row.estimatedQty * row.estimatedRate;
-      const progressFactor = project.overallProgress / 100;
-      const actualQty = Math.round(row.estimatedQty * progressFactor * (0.9 + Math.random() * 0.2));
-      const actualCost = Math.round(actualQty * row.estimatedRate * (0.95 + Math.random() * 0.15));
-      await prisma.boqItem.create({
-        data: {
-          projectId: project.id,
-          category: row.category,
-          itemName: row.itemName,
-          materialId: row.materialId,
-          estimatedQty: row.estimatedQty,
-          estimatedRate: row.estimatedRate,
-          estimatedCost,
-          actualQty,
-          actualCost,
         },
       });
     }
@@ -432,72 +365,41 @@ async function main() {
     }
   }
 
-  // ---------- Purchases ----------
+  // ---------- Material purchases (recorded directly by the supervisor) ----------
   const purchaseMaterials = [cement, steel, bricks, sand, tiles, paint];
-  const purchaseStatuses: PurchaseStatus[] = [
-    PurchaseStatus.SUBMITTED, PurchaseStatus.APPROVED, PurchaseStatus.PURCHASED,
-    PurchaseStatus.PAID, PurchaseStatus.SUBMITTED, PurchaseStatus.DRAFT,
-  ];
+  const vendorNames = ["ABC Traders", "TN Cement Agency", "Chennai Steel Corp", "Kaveri Sand Suppliers", "Madurai Tiles & Sanitary", "CBE Paints & Hardware"];
   let purchaseSeq = 0;
-  const purchases = [];
   for (const project of projects) {
     for (let i = 0; i < 4; i++) {
       purchaseSeq++;
       const material = pick(purchaseMaterials, purchaseSeq);
-      const supplier = pick(suppliers, purchaseSeq);
       const rate = material.name === "Cement" ? 380 : material.name === "Steel (TMT Bars)" ? 62 : material.name === "Bricks" ? 8 : 45;
       const quantity = rand(20, 200);
-      const status = pick(purchaseStatuses, purchaseSeq);
-      const purchase = await prisma.purchase.create({
+      // Completed project: purchases fall before its last attendance day; others: within the last 10 days.
+      const date = daysFrom(TODAY, project.status === ProjectStatus.COMPLETED ? -rand(5, 9) : -rand(0, 9));
+      await prisma.purchase.create({
         data: {
           projectId: project.id,
-          supplierId: supplier.id,
           materialId: material.id,
           quantity,
           unit: material.unit,
           rate,
           totalAmount: quantity * rate,
-          requiredDate: daysFrom(TODAY, rand(1, 10)),
-          billPhotoUrl: status === PurchaseStatus.PURCHASED || status === PurchaseStatus.PAID ? `https://picsum.photos/seed/bill-${purchaseSeq}/600/800` : null,
-          status,
+          date,
+          vendorName: pick(vendorNames, purchaseSeq),
+          billPhotoUrl: `https://picsum.photos/seed/bill-${purchaseSeq}/600/800`,
           remarks: "Required for ongoing site work.",
-          requestedById: project.supervisor.id,
-          approvedById: status === PurchaseStatus.DRAFT || status === PurchaseStatus.SUBMITTED ? null : admin.id,
+          createdById: project.supervisor.id,
         },
       });
-      purchases.push({ ...purchase, project });
+      await prisma.inventory.update({
+        where: { projectId_materialId: { projectId: project.id, materialId: material.id } },
+        data: { currentStock: { increment: quantity } },
+      });
+      await prisma.inventoryTransaction.create({
+        data: { projectId: project.id, materialId: material.id, type: InventoryTxnType.PURCHASE, quantity, date, notes: `Bought by ${project.supervisor.name}` },
+      });
     }
-  }
-
-  // Pending approvals list should have real teeth: create Approval rows for SUBMITTED purchases
-  for (const purchase of purchases.filter((p) => p.status === PurchaseStatus.SUBMITTED)) {
-    await prisma.approval.create({
-      data: {
-        type: ApprovalType.PURCHASE,
-        refId: purchase.id,
-        refLabel: `Purchase request — ${purchase.quantity} units for ${purchase.project.name}`,
-        status: ApprovalStatus.PENDING,
-      },
-    });
-  }
-
-  // ---------- Supplier payments ----------
-  let supplierPaySeq = 0;
-  for (const purchase of purchases.filter((p) => p.status === PurchaseStatus.PURCHASED || p.status === PurchaseStatus.PAID)) {
-    supplierPaySeq++;
-    const paidAmount = purchase.status === PurchaseStatus.PAID ? purchase.totalAmount : purchase.totalAmount * 0.6;
-    await prisma.supplierPayment.create({
-      data: {
-        supplierId: purchase.supplierId,
-        projectId: purchase.projectId,
-        invoiceNumber: `INV-${String(2000 + supplierPaySeq)}`,
-        invoiceAmount: purchase.totalAmount,
-        paidAmount,
-        paymentDate: daysFrom(TODAY, -rand(1, 15)),
-        paymentMode: pick(payModes, supplierPaySeq),
-        referenceNumber: `REF-${String(3000 + supplierPaySeq)}`,
-      },
-    });
   }
 
   // ---------- Expenses ----------
@@ -508,45 +410,20 @@ async function main() {
       expenseSeq++;
       const category = pick(expenseCategories, expenseSeq) as ExpenseCategory;
       const amount = rand(300, 8000);
-      const status = expenseSeq % 5 === 0 ? ExpenseStatus.SUBMITTED : ExpenseStatus.APPROVED;
-      const expense = await prisma.expense.create({
+      await prisma.expense.create({
         data: {
           projectId: project.id,
           category,
           amount,
-          date: daysFrom(TODAY, -rand(0, 9)),
+          date: daysFrom(TODAY, project.status === ProjectStatus.COMPLETED ? -rand(5, 9) : -rand(0, 9)),
           description: `${category.replace("_", " ").toLowerCase()} expense at site`,
           paidBy: project.supervisor.name,
           paymentMode: pick(payModes, expenseSeq),
           receiptPhotoUrl: `https://picsum.photos/seed/receipt-${expenseSeq}/600/800`,
-          status,
           createdById: project.supervisor.id,
         },
       });
-      if (status === ExpenseStatus.SUBMITTED) {
-        await prisma.approval.create({
-          data: {
-            type: ApprovalType.EXPENSE,
-            refId: expense.id,
-            refLabel: `${category.replace("_", " ")} expense — ${formatAmountLabel(amount)} for ${project.name}`,
-            status: ApprovalStatus.PENDING,
-          },
-        });
-      }
     }
-  }
-
-  // ---------- Petty cash ----------
-  for (const project of projects) {
-    await prisma.pettyCash.create({
-      data: {
-        projectId: project.id,
-        supervisorId: project.supervisor.id,
-        openingBalance: 50000,
-        date: daysFrom(TODAY, -20),
-        settled: project.status === ProjectStatus.COMPLETED,
-      },
-    });
   }
 
   // ---------- Daily reports + photos ----------
@@ -579,9 +456,6 @@ async function main() {
     for (let i = 0; i < reportsForProject; i++) {
       reportSeq++;
       const date = daysFrom(TODAY, -(reportsForProject - i));
-      const status = i === reportsForProject - 1 && project.status !== ProjectStatus.COMPLETED
-        ? DailyReportStatus.SUBMITTED
-        : DailyReportStatus.APPROVED;
       const workersCount = rand(6, 16);
       const report = await prisma.dailyReport.create({
         data: {
@@ -598,23 +472,9 @@ async function main() {
           issues: reportSeq % 7 === 0 ? "Minor delay due to rain in the morning." : null,
           tomorrowPlan: pick(tomorrowPlanSamples, reportSeq),
           remarks: "Work progressing as per schedule.",
-          status,
           createdById: project.supervisor.id,
-          approvedById: status === DailyReportStatus.APPROVED ? admin.id : null,
-          approvedAt: status === DailyReportStatus.APPROVED ? date : null,
         },
       });
-
-      if (status === DailyReportStatus.SUBMITTED) {
-        await prisma.approval.create({
-          data: {
-            type: ApprovalType.DAILY_REPORT,
-            refId: report.id,
-            refLabel: `Daily report — ${project.name} (${date.toDateString()})`,
-            status: ApprovalStatus.PENDING,
-          },
-        });
-      }
 
       const photoCount = rand(2, 3);
       for (let ph = 0; ph < photoCount; ph++) {
@@ -633,139 +493,10 @@ async function main() {
     }
   }
 
-  // ---------- Project documents ----------
-  const docTypes = [
-    { name: "Signed Agreement", type: "Agreement", visible: true },
-    { name: "Cost Estimate", type: "Estimate", visible: true },
-    { name: "Approved Building Plan", type: "Approved Plan", visible: true },
-    { name: "Internal Site Survey Notes", type: "Other", visible: false },
-  ];
-  for (const project of projects) {
-    for (const doc of docTypes) {
-      await prisma.projectDocument.create({
-        data: {
-          projectId: project.id,
-          name: doc.name,
-          type: doc.type,
-          url: `https://picsum.photos/seed/doc-${project.id}-${doc.type}/800/1100`,
-          visibleToClient: doc.visible,
-        },
-      });
-    }
-  }
-
-  // ---------- Payment milestones + client payments ----------
-  const milestoneNames = ["Foundation", "Structure", "Brickwork", "Finishing", "Handover"];
-  for (const project of projects) {
-    const perMilestone = project.contractValue / milestoneNames.length;
-    const paidMilestoneCount = Math.round((project.overallProgress / 100) * milestoneNames.length);
-    for (let i = 0; i < milestoneNames.length; i++) {
-      const isPaid = i < paidMilestoneCount;
-      const milestone = await prisma.paymentMilestone.create({
-        data: {
-          projectId: project.id,
-          name: milestoneNames[i],
-          amount: Math.round(perMilestone),
-          dueDate: daysFrom(project.startDate, (i + 1) * 60),
-          status: isPaid ? MilestoneStatus.PAID : i === paidMilestoneCount ? MilestoneStatus.DUE : MilestoneStatus.PENDING,
-          paidDate: isPaid ? daysFrom(project.startDate, (i + 1) * 55) : null,
-          referenceNumber: isPaid ? `MS-${project.id.slice(-4)}-${i}` : null,
-          order: i,
-        },
-      });
-      if (isPaid) {
-        await prisma.clientPayment.create({
-          data: {
-            projectId: project.id,
-            amount: milestone.amount,
-            date: milestone.paidDate!,
-            mode: PaymentMode.BANK_TRANSFER,
-            referenceNumber: milestone.referenceNumber,
-            remarks: `${milestone.name} milestone payment`,
-          },
-        });
-      }
-    }
-  }
-
-  // ---------- Issues ----------
-  const issueSamples = [
-    { title: "Water seepage near bathroom wall", priority: IssuePriority.HIGH },
-    { title: "Delay in cement delivery", priority: IssuePriority.MEDIUM },
-    { title: "Crack observed in compound wall", priority: IssuePriority.CRITICAL },
-    { title: "Electrician not available on site", priority: IssuePriority.LOW },
-  ];
-  for (const project of projects) {
-    const issue = pick(issueSamples, projects.indexOf(project));
-    await prisma.issue.create({
-      data: {
-        projectId: project.id,
-        title: issue.title,
-        description: `${issue.title} reported at ${project.name}. Needs review and resolution plan.`,
-        priority: issue.priority,
-        photoUrl: `https://picsum.photos/seed/issue-${project.id}/700/500`,
-        assignedToId: admin.id,
-        reportedById: project.supervisor.id,
-        status: project.status === ProjectStatus.COMPLETED ? IssueStatus.RESOLVED : IssueStatus.OPEN,
-        resolution: project.status === ProjectStatus.COMPLETED ? "Resolved before handover." : null,
-        resolvedAt: project.status === ProjectStatus.COMPLETED ? daysFrom(TODAY, -60) : null,
-      },
-    });
-  }
-
-  // ---------- Notifications ----------
-  for (const project of projects) {
-    await prisma.notification.create({
-      data: {
-        userId: admin.id,
-        type: "DAILY_REPORT",
-        title: "New daily report submitted",
-        message: `${project.supervisor.name} submitted a daily report for ${project.name}.`,
-        link: `/admin/projects/${project.id}?tab=daily-updates`,
-        read: false,
-      },
-    });
-    await prisma.notification.create({
-      data: {
-        userId: project.client.id,
-        type: "PROGRESS_UPDATE",
-        title: "New progress update",
-        message: `New photos and progress update available for ${project.name}.`,
-        link: `/client`,
-        read: false,
-      },
-    });
-  }
-
-  // ---------- Audit logs ----------
-  const auditSamples = [
-    { user: abdul, action: "SUBMITTED", description: "Supervisor Abdul Rahman submitted a daily report" },
-    { user: admin, action: "APPROVED", description: "Admin Ibrahim Al-Mizan approved a purchase request" },
-    { user: admin, action: "RECORDED_PAYMENT", description: "₹2,50,000 supplier payment recorded" },
-    { user: admin, action: "UPDATED_PAYMENT", description: "Client payment status updated" },
-  ];
-  for (const a of auditSamples) {
-    await prisma.auditLog.create({
-      data: {
-        userId: a.user.id,
-        action: a.action,
-        entityType: "SYSTEM",
-        entityId: "seed",
-        description: a.description,
-        createdAt: daysFrom(TODAY, -rand(1, 8)),
-      },
-    });
-  }
-
   console.log("Seed complete.");
   console.log("Demo accounts (password: Almizan@123):");
   console.log("  Admin:      admin@almizan.demo");
   console.log("  Supervisor: supervisor@almizan.demo (Abdul Rahman — Ayyampettai Residence)");
-  console.log("  Client:     client@almizan.demo (Rajesh Kumar — Ayyampettai Residence)");
-}
-
-function formatAmountLabel(amount: number) {
-  return `₹${amount.toLocaleString("en-IN")}`;
 }
 
 main()
