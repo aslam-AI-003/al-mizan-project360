@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
 import LoginForm from "./login-form";
 
 export default async function LoginPage({
@@ -6,6 +8,8 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
+  // First visit: no Owner yet, so send them to create one.
+  if ((await prisma.user.count({ where: { role: "ADMIN" } })) === 0) redirect("/setup");
   const showDemoCredentials = process.env.NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS === "true";
 
   return (
@@ -29,8 +33,7 @@ export default async function LoginPage({
           <div className="mt-5 rounded-2xl border border-dashed border-white/25 bg-white/5 p-4 text-xs text-white/80">
             <p className="mb-2 font-semibold text-white">Demo credentials (development only)</p>
             <ul className="space-y-1">
-              <li><span className="text-white/50">Admin:</span> admin@almizan.demo</li>
-              <li><span className="text-white/50">Supervisor:</span> supervisor@almizan.demo</li>
+              <li><span className="text-white/50">Owner:</span> admin@almizan.demo</li>
               <li className="pt-1 text-white/50">Password for all: <span className="text-white">Almizan@123</span></li>
             </ul>
           </div>

@@ -1,18 +1,16 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { prisma } from "@/lib/db";
 import { createProject } from "./actions";
 
 const STATUS_OPTIONS = ["PLANNING", "STARTED", "IN_PROGRESS", "ON_HOLD", "DELAYED", "COMPLETED"];
 
-export default async function NewProjectPage() {
-  const supervisors = await prisma.user.findMany({ where: { role: "SUPERVISOR" }, orderBy: { name: "asc" } });
+export default function NewProjectPage() {
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link
-          href="/admin/projects"
+          href="/admin"
           className="flex h-9 w-9 items-center justify-center rounded-full text-black/60 hover:bg-black/[0.04]"
         >
           <ArrowLeft size={18} />
@@ -57,22 +55,6 @@ export default async function NewProjectPage() {
           </div>
         </div>
 
-        <div>
-          <span className="label">Supervisor(s)</span>
-          {supervisors.length === 0 ? (
-            <p className="text-xs text-black/40">No supervisor accounts exist yet.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-2 rounded-xl border border-black/10 p-3 sm:grid-cols-2">
-              {supervisors.map((supervisor) => (
-                <label key={supervisor.id} className="flex items-center gap-2 text-sm text-[var(--foreground)]">
-                  <input type="checkbox" name="supervisorIds" value={supervisor.id} className="h-4 w-4 rounded border-black/20" />
-                  {supervisor.name}
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="label" htmlFor="budget">Budget (INR)</label>
@@ -106,7 +88,7 @@ export default async function NewProjectPage() {
 
         <div className="flex gap-3 pt-2">
           <button type="submit" className="btn-primary">Create Project</button>
-          <Link href="/admin/projects" className="btn-outline">Cancel</Link>
+          <Link href="/admin" className="btn-outline">Cancel</Link>
         </div>
       </form>
     </div>

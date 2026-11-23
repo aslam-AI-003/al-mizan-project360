@@ -80,7 +80,7 @@ async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
   // ---------- Users ----------
-  await prisma.user.create({
+  const owner = await prisma.user.create({
     data: {
       email: "admin@almizan.demo",
       passwordHash,
@@ -343,6 +343,20 @@ async function main() {
     }
   }
 
+  // ---------- Daily labour totals (what the Owner sees; no worker names) ----------
+  const attendanceByDay = await prisma.workerAttendance.groupBy({
+    by: ["projectId", "date"],
+    where: { status: { not: AttendanceStatus.ABSENT } },
+    _sum: { wageAmount: true },
+    _count: true,
+  });
+  for (const row of attendanceByDay) {
+    if (!row._sum.wageAmount) continue;
+    await prisma.labourEntry.create({
+      data: { projectId: row.projectId, date: row.date, workers: row._count, amount: row._sum.wageAmount, note: "Site labour" },
+    });
+  }
+
   // ---------- Worker payments (monthly, some paid/pending/partial) ----------
   const payModes: PaymentMode[] = [PaymentMode.CASH, PaymentMode.UPI, PaymentMode.BANK_TRANSFER];
   let paySeq = 0;
@@ -368,6 +382,10 @@ async function main() {
   // ---------- Material purchases (recorded directly by the supervisor) ----------
   const purchaseMaterials = [cement, steel, bricks, sand, tiles, paint];
   const vendorNames = ["ABC Traders", "TN Cement Agency", "Chennai Steel Corp", "Kaveri Sand Suppliers", "Madurai Tiles & Sanitary", "CBE Paints & Hardware"];
+  const suppliers = [];
+  for (const [i, name] of vendorNames.entries()) {
+    suppliers.push(await prisma.supplier.create({ data: { name, phone: `+91 90031 1000${i + 1}` } }));
+  }
   let purchaseSeq = 0;
   for (const project of projects) {
     for (let i = 0; i < 4; i++) {
@@ -386,10 +404,10 @@ async function main() {
           rate,
           totalAmount: quantity * rate,
           date,
-          vendorName: pick(vendorNames, purchaseSeq),
+          supplierId: pick(suppliers, purchaseSeq).id,
           billPhotoUrl: `https://picsum.photos/seed/bill-${purchaseSeq}/600/800`,
           remarks: "Required for ongoing site work.",
-          createdById: project.supervisor.id,
+          createdById: owner.id,
         },
       });
       await prisma.inventory.update({
@@ -398,6 +416,18 @@ async function main() {
       });
       await prisma.inventoryTransaction.create({
         data: { projectId: project.id, materialId: material.id, type: InventoryTxnType.PURCHASE, quantity, date, notes: `Bought by ${project.supervisor.name}` },
+      });
+    }
+  }
+
+  // ---------- Supplier payments (some paid in full, some partly, some not at all) ----------
+  for (const [i, supplier] of suppliers.entries()) {
+    const bought = await prisma.purchase.aggregate({ where: { supplierId: supplier.id }, _sum: { totalAmount: true } });
+    const total = bought._sum.totalAmount ?? 0;
+    const fraction = [1, 0.5, 0, 0.75, 1, 0.3][i % 6];
+    if (total > 0 && fraction > 0) {
+      await prisma.supplierPayment.create({
+        data: { supplierId: supplier.id, amount: Math.round(total * fraction), date: daysFrom(TODAY, -rand(0, 5)), mode: PaymentMode.UPI, note: "Seed payment" },
       });
     }
   }
@@ -495,8 +525,7 @@ async function main() {
 
   console.log("Seed complete.");
   console.log("Demo accounts (password: Almizan@123):");
-  console.log("  Admin:      admin@almizan.demo");
-  console.log("  Supervisor: supervisor@almizan.demo (Abdul Rahman — Ayyampettai Residence)");
+  console.log("  Owner: admin@almizan.demo");
 }
 
 main()

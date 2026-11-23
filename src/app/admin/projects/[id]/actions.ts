@@ -2,125 +2,42 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { ProjectStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
-import { ProjectStatus, StageStatus, PaymentMode } from "@prisma/client";
-
-async function requireAdmin() {
-  const session = await getSession();
-  if (!session || session.role !== "ADMIN") throw new Error("Unauthorized");
-  return session;
-}
+import { requireOwner } from "@/lib/owner-guard";
 
 export async function updateProject(formData: FormData) {
-  await requireAdmin();
+  await requireOwner();
   const projectId = String(formData.get("projectId"));
+  const status = String(formData.get("status"));
+  if (!Object.values(ProjectStatus).includes(status as ProjectStatus)) throw new Error("Invalid status");
+  const num = (key: string) => {
+    const n = Number(formData.get(key));
+    return Number.isFinite(n) ? n : 0;
+  };
 
   await prisma.project.update({
     where: { id: projectId },
     data: {
+      name: String(formData.get("name") ?? "").trim() || undefined,
+      siteAddress: String(formData.get("siteAddress") ?? "").trim() || undefined,
       clientName: String(formData.get("clientName") ?? "").trim(),
-      description: String(formData.get("description") ?? "") || null,
-      projectManager: String(formData.get("projectManager") ?? "") || null,
-      budget: Number(formData.get("budget")),
-      contractValue: Number(formData.get("contractValue")),
+      description: String(formData.get("description") ?? "").trim() || null,
+      budget: num("budget"),
+      contractValue: num("contractValue"),
       startDate: new Date(String(formData.get("startDate"))),
       expectedCompletionDate: new Date(String(formData.get("expectedCompletionDate"))),
-      status: String(formData.get("status")) as ProjectStatus,
-      overallProgress: Number(formData.get("overallProgress")),
+      status: status as ProjectStatus,
+      overallProgress: Math.max(0, Math.min(100, Math.round(num("overallProgress")))),
     },
   });
-
-
-  revalidatePath(`/admin/projects/${projectId}`);
-  revalidatePath("/admin/projects");
+  revalidatePath("/admin", "layout");
 }
 
 export async function archiveProject(formData: FormData) {
-  await requireAdmin();
+  await requireOwner();
   const projectId = String(formData.get("projectId"));
-
   await prisma.project.update({ where: { id: projectId }, data: { archived: true } });
-
-  revalidatePath("/admin/projects");
-  redirect("/admin/projects");
-}
-
-export async function updateProgressStage(formData: FormData) {
-  await requireAdmin();
-  const stageId = String(formData.get("stageId"));
-  const projectId = String(formData.get("projectId"));
-  const status = String(formData.get("status")) as StageStatus;
-  const progressPercentage = Number(formData.get("progressPercentage"));
-  const remarks = String(formData.get("remarks") ?? "") || null;
-  const actualStartRaw = String(formData.get("actualStart") ?? "");
-  const actualEndRaw = String(formData.get("actualEnd") ?? "");
-
-  await prisma.progressStage.update({
-    where: { id: stageId },
-    data: {
-      status,
-      progressPercentage,
-      remarks,
-      actualStart: actualStartRaw ? new Date(actualStartRaw) : null,
-      actualEnd: actualEndRaw ? new Date(actualEndRaw) : null,
-    },
-  });
-
-
-  revalidatePath(`/admin/projects/${projectId}`);
-}
-
-export async function transferMaterial(formData: FormData) {
-  await requireAdmin();
-  const fromProjectId = String(formData.get("projectId"));
-  const toProjectId = String(formData.get("toProjectId"));
-  const materialId = String(formData.get("materialId"));
-  const quantity = Number(formData.get("quantity"));
-
-  if (!toProjectId || toProjectId === fromProjectId || quantity <= 0) return;
-
-  const fromInventory = await prisma.inventory.findUnique({
-    where: { projectId_materialId: { projectId: fromProjectId, materialId } },
-  });
-  if (!fromInventory || fromInventory.currentStock < quantity) return;
-
-  await prisma.inventory.update({
-    where: { id: fromInventory.id },
-    data: { currentStock: { decrement: quantity } },
-  });
-
-  const toInventory = await prisma.inventory.upsert({
-    where: { projectId_materialId: { projectId: toProjectId, materialId } },
-    create: { projectId: toProjectId, materialId, currentStock: quantity },
-    update: { currentStock: { increment: quantity } },
-  });
-  void toInventory;
-
-  await prisma.inventoryTransaction.create({
-    data: { projectId: fromProjectId, materialId, type: "TRANSFER_OUT", quantity, transferProjectId: toProjectId },
-  });
-  await prisma.inventoryTransaction.create({
-    data: { projectId: toProjectId, materialId, type: "TRANSFER_IN", quantity, transferProjectId: fromProjectId },
-  });
-
-
-  revalidatePath(`/admin/projects/${fromProjectId}`);
-  revalidatePath(`/admin/projects/${toProjectId}`);
-}
-
-export async function recordWorkerPayment(formData: FormData) {
-  await requireAdmin();
-  const workerId = String(formData.get("workerId"));
-  const projectId = String(formData.get("projectId"));
-  const amount = Number(formData.get("amount"));
-  const mode = String(formData.get("mode")) as PaymentMode;
-  const referenceNumber = String(formData.get("referenceNumber") ?? "") || null;
-
-  await prisma.workerPayment.create({
-    data: { workerId, projectId, amount, paymentDate: new Date(), mode, referenceNumber },
-  });
-
-
-  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath("/admin", "layout");
+  redirect("/admin");
 }

@@ -2,29 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ADMIN_SIDEBAR_NAV,
-  SUPERVISOR_SIDEBAR_NAV,
-} from "./nav-config";
-
-const NAV_BY_ROLE = {
-  ADMIN: ADMIN_SIDEBAR_NAV,
-  SUPERVISOR: SUPERVISOR_SIDEBAR_NAV,
-} as const;
+import { OWNER_NAV } from "./nav-config";
 
 export function Sidebar({
-  role,
   brandLabel,
   name,
   roleLabel,
 }: {
-  role: keyof typeof NAV_BY_ROLE;
   brandLabel: string;
   name: string;
   roleLabel: string;
 }) {
   const pathname = usePathname();
-  const items = NAV_BY_ROLE[role];
+  const items = OWNER_NAV;
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-black/5 bg-white md:flex md:flex-col">
@@ -40,7 +30,7 @@ export function Sidebar({
 
       <nav className="flex-1 space-y-1 px-3 py-4">
         {items.map((item) => {
-          const isHome = ["/admin", "/supervisor"].includes(item.href);
+          const isHome = item.href === "/admin";
           const isActive = isHome ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
