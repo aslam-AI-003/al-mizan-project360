@@ -1,4 +1,5 @@
 import { todayKey } from "@/lib/date-range";
+import { Picker } from "@/components/picker";
 import { recordSupplierPayment } from "./actions";
 
 /** Record a payment to a supplier. Pass supplierId to fix the supplier, or a list to choose from. */
@@ -11,13 +12,16 @@ export function PaymentForm({ supplierId, suppliers }: { supplierId?: string; su
       ) : (
         <div>
           <label className="label">Supplier</label>
-          <select name="supplierId" required className="select">
-            {suppliers?.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}{s.pending > 0 ? ` — ₹${Math.round(s.pending).toLocaleString("en-IN")} pending` : ""}
-              </option>
-            ))}
-          </select>
+          <Picker
+            name="supplierId"
+            title="Supplier"
+            defaultValue={suppliers?.[0]?.id}
+            options={(suppliers ?? []).map((s) => ({
+              value: s.id,
+              label: s.name,
+              hint: s.pending > 0 ? `₹${Math.round(s.pending).toLocaleString("en-IN")} pending` : "Nothing pending",
+            }))}
+          />
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
@@ -33,11 +37,11 @@ export function PaymentForm({ supplierId, suppliers }: { supplierId?: string; su
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="label">Mode</label>
-          <select name="mode" className="select" defaultValue="CASH">
-            <option value="CASH">Cash</option>
-            <option value="UPI">UPI</option>
-            <option value="BANK_TRANSFER">Bank Transfer</option>
-          </select>
+          <Picker name="mode" title="Payment mode" defaultValue="CASH" options={[
+  { value: "CASH", label: "Cash" },
+  { value: "UPI", label: "UPI" },
+  { value: "BANK_TRANSFER", label: "Bank Transfer" },
+]} />
         </div>
         <div>
           <label className="label">Note</label>

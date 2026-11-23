@@ -1,8 +1,16 @@
 import Link from "next/link";
+import { Picker } from "@/components/picker";
 import { ArrowLeft } from "lucide-react";
 import { createProject } from "./actions";
 
-const STATUS_OPTIONS = ["PLANNING", "STARTED", "IN_PROGRESS", "ON_HOLD", "DELAYED", "COMPLETED"];
+const STATUS_OPTIONS = [
+  { value: "PLANNING", label: "Planning" },
+  { value: "STARTED", label: "Started" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "ON_HOLD", label: "On Hold" },
+  { value: "DELAYED", label: "Delayed" },
+  { value: "COMPLETED", label: "Completed" },
+];
 
 export default function NewProjectPage() {
 
@@ -79,11 +87,7 @@ export default function NewProjectPage() {
 
         <div>
           <label className="label" htmlFor="status">Status</label>
-          <select id="status" name="status" className="select" defaultValue="PLANNING">
-            {STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>{status.replace("_", " ")}</option>
-            ))}
-          </select>
+          <Picker id="status" name="status" title="Status" defaultValue="PLANNING" options={STATUS_OPTIONS} />
         </div>
 
         <div className="flex gap-3 pt-2">

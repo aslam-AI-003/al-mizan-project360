@@ -32,15 +32,15 @@ export default async function SupplierDetailPage(props: PageProps<"/admin/suppli
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="card p-4">
+        <div className="card p-3 sm:p-4">
           <p className="text-xs text-black/50">Bought</p>
-          <p className="text-lg font-bold">{formatINR(bought)}</p>
+          <p className="text-base font-bold sm:text-lg">{formatINR(bought)}</p>
         </div>
-        <div className="card p-4">
+        <div className="card p-3 sm:p-4">
           <p className="text-xs text-black/50">Paid</p>
-          <p className="text-lg font-bold text-[var(--status-success)]">{formatINR(paid)}</p>
+          <p className="text-base font-bold sm:text-lg text-[var(--status-success)]">{formatINR(paid)}</p>
         </div>
-        <div className="card p-4">
+        <div className="card p-3 sm:p-4">
           <p className="text-xs text-black/50">{pending < 0 ? "Advance" : "Pending"}</p>
           <p className={`text-lg font-bold ${pending > 0 ? "text-[var(--status-warning)]" : "text-[var(--status-success)]"}`}>{formatINR(Math.abs(pending))}</p>
         </div>

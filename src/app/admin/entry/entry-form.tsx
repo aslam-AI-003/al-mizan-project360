@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { formatINR } from "@/lib/format";
+import { Picker } from "@/components/picker";
 import { saveDailyEntry, type DailyEntryPayload } from "./actions";
 
 const EXPENSE_CATEGORIES = [
@@ -68,6 +69,14 @@ export function DailyEntryForm({
   const [usage, setUsage] = useState<UsageRow[]>(initial.usage);
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initial.expenses);
 
+  const materialOptions = materials.map((m) => {
+    const s = stock.find((x) => x.name === m.name);
+    return { value: m.name, label: m.name, hint: s ? `${s.inStock} ${s.unit} in stock · ${m.unit}` : m.unit };
+  });
+  const supplierOptions = suppliers.map((name) => ({ value: name, label: name }));
+  const stockOptions = stock.map((s) => ({ value: s.name, label: s.name, hint: `${s.inStock} ${s.unit} in stock` }));
+  const expenseOptions = EXPENSE_CATEGORIES.map((c) => ({ value: c.value, label: c.label }));
+
   const unitFor = (name: string) => materials.find((m) => m.name.toLowerCase() === name.trim().toLowerCase())?.unit;
   const stockFor = (name: string) => stock.find((s) => s.name.toLowerCase() === name.trim().toLowerCase());
 
@@ -112,33 +121,17 @@ export function DailyEntryForm({
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="payload" value={JSON.stringify(payload)} />
 
-      <datalist id="material-options">
-        {materials.map((m) => (
-          <option key={m.name} value={m.name} />
-        ))}
-      </datalist>
-      <datalist id="supplier-options">
-        {suppliers.map((s) => (
-          <option key={s} value={s} />
-        ))}
-      </datalist>
-      <datalist id="stock-options">
-        {stock.map((s) => (
-          <option key={s.name} value={s.name}>{`${s.inStock} ${s.unit} in stock`}</option>
-        ))}
-      </datalist>
-
       {/* LABOUR */}
       <Section title="Labour" total={labourTotal} onAdd={() => setLabour((r) => [...r, emptyLabour()])}>
         {labour.map((row, i) => (
-          <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:grid-cols-[8rem_10rem_1fr_auto]">
+          <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-x-2 gap-y-3 md:grid-cols-[8rem_10rem_1fr_auto] md:gap-y-0">
             <Field label="Workers">
               <input type="number" min={0} inputMode="numeric" className="input" value={row.workers} onChange={(e) => update(setLabour, i, { workers: e.target.value })} />
             </Field>
             <Field label="Amount (₹)">
               <input type="number" min={0} step="any" inputMode="decimal" className="input" value={row.amount} onChange={(e) => update(setLabour, i, { amount: e.target.value })} />
             </Field>
-            <Field label="Note" className="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto">
+            <Field label="Note" className="col-span-2 row-start-2 md:col-span-1 md:row-start-auto">
               <input className="input" placeholder="e.g. Masonry, 2 helpers" value={row.note} onChange={(e) => update(setLabour, i, { note: e.target.value })} />
             </Field>
             <RemoveButton onClick={() => remove(setLabour, i)} />
@@ -152,15 +145,15 @@ export function DailyEntryForm({
           const amount = num(row.quantity) * num(row.rate);
           return (
             <div key={i} className="rounded-xl border border-black/5 p-3">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_6rem_7rem_7rem_1fr_auto]">
-                <Field label="Material" className="col-span-2 sm:col-span-1">
-                  <input
-                    list="material-options"
-                    className="input"
-                    placeholder="e.g. Cement"
+              <div className="grid grid-cols-2 gap-x-2 gap-y-3 lg:grid-cols-[1.3fr_6rem_6rem_7rem_1.2fr_auto] lg:gap-y-0">
+                <Field label="Material" className="col-span-2 lg:col-span-1">
+                  <Picker
+                    title="Material"
+                    placeholder="Choose material"
+                    options={materialOptions}
+                    allowCreate
                     value={row.material}
-                    onChange={(e) => {
-                      const material = e.target.value;
+                    onChange={(material) => {
                       const known = unitFor(material);
                       update(setPurchases, i, { material, ...(known ? { unit: known } : {}) });
                     }}
@@ -175,20 +168,25 @@ export function DailyEntryForm({
                 <Field label="Rate (₹)">
                   <input type="number" min={0} step="any" inputMode="decimal" className="input" value={row.rate} onChange={(e) => update(setPurchases, i, { rate: e.target.value })} />
                 </Field>
-                <Field label="Supplier">
-                  <input list="supplier-options" className="input" placeholder="Shop name" value={row.supplier} onChange={(e) => update(setPurchases, i, { supplier: e.target.value })} />
+                <Field label="Supplier" className="col-span-2 lg:col-span-1">
+                  <Picker title="Supplier" placeholder="Choose supplier" options={supplierOptions} allowCreate value={row.supplier} onChange={(supplier) => update(setPurchases, i, { supplier })} />
                 </Field>
-                <div className="flex items-end justify-end">
+                <div className="hidden items-end justify-end lg:flex">
                   <RemoveButton onClick={() => remove(setPurchases, i)} />
                 </div>
               </div>
-              <p className="mt-2 text-right text-xs text-black/50">
-                Amount: <span className="font-semibold text-[var(--foreground)]">{formatINR(amount)}</span>
-              </p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <button type="button" onClick={() => remove(setPurchases, i)} className="text-[13px] font-medium text-red-600 lg:hidden">
+                  Remove
+                </button>
+                <p className="ml-auto text-sm text-black/50">
+                  Amount: <span className="font-bold text-[var(--foreground)]">{formatINR(amount)}</span>
+                </p>
+              </div>
             </div>
           );
         })}
-        <p className="text-xs text-black/40">New supplier or material names are saved automatically. Supplier payments are recorded on the Suppliers page.</p>
+        <p className="text-[13px] text-black/45 md:text-xs">New supplier or material names are saved automatically. Supplier payments are recorded on the Suppliers page.</p>
       </Section>
 
       {/* MATERIALS USED */}
@@ -197,9 +195,9 @@ export function DailyEntryForm({
         {usage.map((row, i) => {
           const s = stockFor(row.material);
           return (
-            <div key={i} className="grid grid-cols-[1fr_7rem_auto] gap-2">
+            <div key={i} className="grid grid-cols-[1fr_7rem_auto] gap-2 md:grid-cols-[1fr_9rem_auto]">
               <Field label="Material" hint={s ? `${s.inStock} ${s.unit} in stock` : undefined}>
-                <input list="stock-options" className="input" value={row.material} onChange={(e) => update(setUsage, i, { material: e.target.value })} />
+                <Picker title="Material used" placeholder="Choose material" options={stockOptions} allowCreate value={row.material} onChange={(material) => update(setUsage, i, { material })} />
               </Field>
               <Field label={`Qty${s ? ` (${s.unit})` : ""}`}>
                 <input type="number" min={0} step="any" inputMode="decimal" className="input" value={row.quantity} onChange={(e) => update(setUsage, i, { quantity: e.target.value })} />
@@ -214,18 +212,14 @@ export function DailyEntryForm({
       <Section title="Other Expenses" total={otherTotal} onAdd={() => setExpenses((r) => [...r, emptyExpense()])}>
         {expenses.length === 0 && <p className="text-xs text-black/40">Optional. Transport, tea, tools, etc.</p>}
         {expenses.map((row, i) => (
-          <div key={i} className="grid grid-cols-[1fr_8rem_auto] gap-2 sm:grid-cols-[12rem_8rem_1fr_auto]">
+          <div key={i} className="grid grid-cols-[1fr_7.5rem_auto] gap-x-2 gap-y-3 md:grid-cols-[13rem_8rem_1fr_auto] md:gap-y-0">
             <Field label="Type">
-              <select className="select" value={row.category} onChange={(e) => update(setExpenses, i, { category: e.target.value as ExpenseCategory })}>
-                {EXPENSE_CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
+              <Picker title="Expense type" options={expenseOptions} value={row.category} onChange={(v) => update(setExpenses, i, { category: v as ExpenseCategory })} />
             </Field>
             <Field label="Amount (₹)">
               <input type="number" min={0} step="any" inputMode="decimal" className="input" value={row.amount} onChange={(e) => update(setExpenses, i, { amount: e.target.value })} />
             </Field>
-            <Field label="Note" className="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto">
+            <Field label="Note" className="col-span-2 row-start-2 md:col-span-1 md:row-start-auto">
               <input className="input" value={row.note} onChange={(e) => update(setExpenses, i, { note: e.target.value })} />
             </Field>
             <RemoveButton onClick={() => remove(setExpenses, i)} />
@@ -240,22 +234,27 @@ export function DailyEntryForm({
         </Field>
       </div>
 
-      {/* TOTALS + SAVE */}
-      <div className="card sticky bottom-20 z-10 space-y-3 p-4 md:bottom-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <div>
-            <p className="text-xs text-black/50">Day total</p>
-            <p className="text-lg font-bold text-[var(--foreground)]">{formatINR(dayTotal)}</p>
+      {/* TOTALS + SAVE — one compact row on phones so it doesn't cover the form */}
+      <div className="card sticky bottom-[4.5rem] z-10 p-3 md:bottom-4 md:space-y-3 md:p-4">
+        {state?.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 md:mb-0">{state.error}</p>}
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1 md:flex md:items-center md:justify-between">
+            <div className="flex items-baseline gap-2 md:block">
+              <p className="text-[13px] text-black/50 md:text-xs">Day total</p>
+              <p className="text-base font-bold md:text-lg">{formatINR(dayTotal)}</p>
+            </div>
+            <div className="flex items-baseline gap-2 md:block md:text-right">
+              <p className="text-[13px] text-black/50 md:text-xs">Balance</p>
+              <p className={`text-base font-bold md:text-lg ${balanceAfter < 0 ? "text-[var(--status-danger)]" : "text-[var(--status-success)]"}`}>
+                {formatINR(balanceAfter)}
+              </p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-black/50">Budget balance after this day</p>
-            <p className={`text-lg font-bold ${balanceAfter < 0 ? "text-[var(--status-danger)]" : "text-[var(--status-success)]"}`}>
-              {formatINR(balanceAfter)}
-            </p>
-          </div>
+          <button type="submit" className="btn-primary shrink-0 md:hidden" disabled={pending}>
+            {pending ? "Saving…" : "Save Day"}
+          </button>
         </div>
-        {state?.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-        <button type="submit" className="btn-primary w-full" disabled={pending}>
+        <button type="submit" className="btn-primary hidden w-full md:flex" disabled={pending}>
           {pending ? "Saving..." : "Save Day"}
         </button>
       </div>
@@ -277,7 +276,7 @@ function Section({
   return (
     <div className="card space-y-3 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-[var(--foreground)]">
+        <h3 className="text-base font-bold text-[var(--foreground)] md:text-sm">
           {title}
           {total !== undefined && <span className="ml-2 font-semibold text-black/50">{formatINR(total)}</span>}
         </h3>
@@ -302,7 +301,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className={className}>
+    <div className={`min-w-0 ${className ?? ""}`}>
       <label className="label">
         {label}
         {hint && <span className="ml-1 font-normal text-black/40">· {hint}</span>}
@@ -317,7 +316,7 @@ function RemoveButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="mt-6 flex h-10 w-10 items-center justify-center self-start rounded-xl text-black/40 hover:bg-red-50 hover:text-red-600"
+      className="mt-[1.6rem] flex h-11 w-11 items-center justify-center self-start rounded-xl text-black/40 hover:bg-red-50 hover:text-red-600 md:h-10 md:w-10"
       title="Remove row"
     >
       <Trash2 size={16} />

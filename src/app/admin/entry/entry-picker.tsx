@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Picker } from "@/components/picker";
 
 export function EntryPicker({
   projects,
@@ -18,11 +19,12 @@ export function EntryPicker({
     <div className="card grid gap-3 p-4 sm:grid-cols-2">
       <div>
         <label className="label">Project</label>
-        <select className="select" value={projectId} onChange={(e) => go(e.target.value, date)}>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+        <Picker
+          title="Project"
+          options={projects.map((p) => ({ value: p.id, label: p.name }))}
+          value={projectId}
+          onChange={(p) => go(p, date)}
+        />
       </div>
       <div>
         <label className="label">Date</label>

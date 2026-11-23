@@ -9,7 +9,8 @@ export function TabsNav({ tabs }: { tabs: { key: string; label: string }[] }) {
   const activeTab = searchParams.get("tab") ?? tabs[0]?.key;
 
   return (
-    <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+    // Phone: fade the right edge so it's clear more tabs scroll into view.
+    <div className="-mx-4 overflow-x-auto px-4 [mask-image:linear-gradient(to_right,black_85%,transparent)] [scrollbar-width:none] md:mx-0 md:px-0 md:[mask-image:none]">
       <div className="flex gap-1.5 border-b border-black/5 pb-px">
         {tabs.map((tab) => {
           const isActive = tab.key === activeTab;

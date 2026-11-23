@@ -12,7 +12,38 @@ export function MaterialsTab({ materials }: { materials: MaterialSummary[] }) {
   const totalCost = materials.reduce((s, m) => s + m.cost, 0);
 
   return (
-    <div className="card overflow-x-auto p-0">
+    <>
+    {/* Phone: one card per material */}
+    <div className="space-y-2 md:hidden">
+      {materials.map((m) => (
+        <div key={m.materialId} className="card p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-base font-bold">{m.name}</p>
+            <p className="text-base font-bold">{formatINR(m.cost)}</p>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+            <div>
+              <p className="text-[13px] text-black/45">Bought</p>
+              <p className="font-medium">{qty(m.bought)} {m.unit}</p>
+            </div>
+            <div>
+              <p className="text-[13px] text-black/45">Used</p>
+              <p className="font-medium">{qty(m.used)} {m.unit}</p>
+            </div>
+            <div>
+              <p className="text-[13px] text-black/45">In stock</p>
+              <p className={`font-bold ${m.inStock < 0 ? "text-[var(--status-danger)]" : ""}`}>{qty(m.inStock)} {m.unit}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+      <div className="card flex items-center justify-between p-4">
+        <p className="font-bold">Total material cost</p>
+        <p className="text-base font-bold">{formatINR(totalCost)}</p>
+      </div>
+    </div>
+    {/* Laptop: table */}
+    <div className="card hidden overflow-x-auto p-0 md:block">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-black/5 text-left text-xs text-black/40">
@@ -44,5 +75,6 @@ export function MaterialsTab({ materials }: { materials: MaterialSummary[] }) {
         </tfoot>
       </table>
     </div>
+    </>
   );
 }
