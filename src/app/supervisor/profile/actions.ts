@@ -3,7 +3,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { requireSupervisorSession } from "@/lib/supervisor-guard";
-import { logAudit } from "@/lib/audit";
 
 export type ChangePasswordState = { error?: string; success?: string };
 
@@ -36,13 +35,6 @@ export async function changePassword(
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
 
-  await logAudit({
-    userId: session.userId,
-    action: "CHANGED_PASSWORD",
-    entityType: "USER",
-    entityId: session.userId,
-    description: `${session.name} changed their password`,
-  });
 
   return { success: "Password updated successfully." };
 }

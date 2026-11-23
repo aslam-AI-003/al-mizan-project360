@@ -1,7 +1,5 @@
-import Link from "next/link";
 import type { DailyReport, ProjectPhoto, User } from "@prisma/client";
 import { formatDate } from "@/lib/format";
-import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { ClipboardList } from "lucide-react";
 
@@ -20,14 +18,6 @@ export function DailyUpdatesTab({ reports }: { reports: ReportWithRelations[] })
             <div>
               <p className="text-sm font-bold text-[var(--foreground)]">{formatDate(report.date)}</p>
               <p className="text-xs text-black/40">{report.workCategory} · by {report.createdBy.name}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <StatusBadge status={report.status} />
-              {report.status === "SUBMITTED" && (
-                <Link href="/admin/approvals" className="text-xs font-semibold text-brand-navy underline">
-                  Review
-                </Link>
-              )}
             </div>
           </div>
           <p className="mb-2 text-sm text-[var(--foreground)]">{report.workCompleted}</p>

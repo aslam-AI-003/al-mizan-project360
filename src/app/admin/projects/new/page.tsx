@@ -6,10 +6,7 @@ import { createProject } from "./actions";
 const STATUS_OPTIONS = ["PLANNING", "STARTED", "IN_PROGRESS", "ON_HOLD", "DELAYED", "COMPLETED"];
 
 export default async function NewProjectPage() {
-  const [clients, supervisors] = await Promise.all([
-    prisma.user.findMany({ where: { role: "CLIENT" }, orderBy: { name: "asc" } }),
-    prisma.user.findMany({ where: { role: "SUPERVISOR" }, orderBy: { name: "asc" } }),
-  ]);
+  const supervisors = await prisma.user.findMany({ where: { role: "SUPERVISOR" }, orderBy: { name: "asc" } });
 
   return (
     <div className="space-y-6">
@@ -44,16 +41,8 @@ export default async function NewProjectPage() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="label" htmlFor="clientId">Client</label>
-            <select id="clientId" name="clientId" required className="select" defaultValue="">
-              <option value="" disabled>Select client</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
-            {clients.length === 0 && (
-              <p className="mt-1 text-xs text-[var(--status-danger)]">No client accounts exist yet.</p>
-            )}
+            <label className="label" htmlFor="clientName">Client Name</label>
+            <input id="clientName" name="clientName" type="text" required className="input" placeholder="e.g. Rajesh Kumar" />
           </div>
 
           <div>

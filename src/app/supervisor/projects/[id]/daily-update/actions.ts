@@ -3,10 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { ApprovalType, ApprovalStatus } from "@prisma/client";
-import { logAudit } from "@/lib/audit";
-import { requireSupervisorSession, requireAssignedProject, notifyAdmins } from "@/lib/supervisor-guard";
-import { formatDate } from "@/lib/format";
+import { requireSupervisorSession, requireAssignedProject } from "@/lib/supervisor-guard";
 
 export async function submitDailyUpdate(formData: FormData) {
   const session = await requireSupervisorSession();
@@ -22,6 +19,7 @@ export async function submitDailyUpdate(formData: FormData) {
   const issues = String(formData.get("issues") ?? "").trim() || null;
   const tomorrowPlan = String(formData.get("tomorrowPlan") ?? "").trim();
   const remarks = String(formData.get("remarks") ?? "").trim() || null;
+  const photoUrl = String(formData.get("photoUrl") ?? "").trim();
 
   if (!dateRaw || !workCompleted || !workCategory || !tomorrowPlan) {
     throw new Error("Missing required fields for daily update");
@@ -41,36 +39,30 @@ export async function submitDailyUpdate(formData: FormData) {
       issues,
       tomorrowPlan,
       remarks,
-      status: "SUBMITTED",
       createdById: session.userId,
     },
   });
 
-  await prisma.approval.create({
-    data: {
-      type: ApprovalType.DAILY_REPORT,
-      refId: report.id,
-      refLabel: `Daily report — ${project.name} (${formatDate(date)})`,
-      status: ApprovalStatus.PENDING,
-    },
-  });
+  if (photoUrl) {
+    await prisma.projectPhoto.create({
+      data: {
+        projectId,
+        dailyReportId: report.id,
+        url: photoUrl,
+        caption: workCategory,
+        workCategory,
+        uploadedById: session.userId,
+      },
+    });
+  }
 
-  await logAudit({
-    userId: session.userId,
-    action: "SUBMITTED",
-    entityType: "DAILY_REPORT",
-    entityId: report.id,
-    description: `${session.name} submitted a daily report for ${project.name}`,
-  });
-
-  await notifyAdmins({
-    type: "DAILY_REPORT",
-    title: "New daily report submitted",
-    message: `${session.name} submitted a daily report for ${project.name}.`,
-    link: "/admin/approvals",
-  });
+  // No approval step: the reported progress updates the project straight away (never goes backwards).
+  if (progressPercentage > project.overallProgress) {
+    await prisma.project.update({ where: { id: projectId }, data: { overallProgress: progressPercentage } });
+  }
 
   revalidatePath(`/supervisor/projects/${projectId}`);
   revalidatePath(`/supervisor`);
+  revalidatePath(`/admin/projects/${projectId}`);
   redirect(`/supervisor/projects/${projectId}`);
 }

@@ -5,13 +5,11 @@ import { usePathname } from "next/navigation";
 import {
   ADMIN_SIDEBAR_NAV,
   SUPERVISOR_SIDEBAR_NAV,
-  CLIENT_SIDEBAR_NAV,
 } from "./nav-config";
 
 const NAV_BY_ROLE = {
   ADMIN: ADMIN_SIDEBAR_NAV,
   SUPERVISOR: SUPERVISOR_SIDEBAR_NAV,
-  CLIENT: CLIENT_SIDEBAR_NAV,
 } as const;
 
 export function Sidebar({
@@ -42,7 +40,7 @@ export function Sidebar({
 
       <nav className="flex-1 space-y-1 px-3 py-4">
         {items.map((item) => {
-          const isHome = ["/admin", "/supervisor", "/client"].includes(item.href);
+          const isHome = ["/admin", "/supervisor"].includes(item.href);
           const isActive = isHome ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (

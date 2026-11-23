@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSession, type SessionPayload } from "@/lib/auth";
-import { notify } from "@/lib/audit";
 
 /**
  * Re-checks the session inside a Server Action. Server Actions are independently
@@ -43,10 +42,4 @@ export async function getOwnedProjectOrRedirect(projectId: string, supervisorId:
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) redirect("/supervisor/projects");
   return project;
-}
-
-/** Notifies every admin user — used for supervisor submissions that admins must act on. */
-export async function notifyAdmins(params: { type: string; title: string; message: string; link?: string }) {
-  const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
-  await Promise.all(admins.map((admin) => notify({ userId: admin.id, ...params })));
 }

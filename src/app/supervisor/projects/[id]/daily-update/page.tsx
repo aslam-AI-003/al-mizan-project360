@@ -81,6 +81,10 @@ export default async function DailyUpdatePage({ params }: PageProps<"/supervisor
           <textarea name="remarks" rows={2} className="textarea" placeholder="Any other remarks..." />
         </div>
 
+        <div>
+          <label className="label">Photo URL (optional)</label>
+          <input type="url" name="photoUrl" className="input" placeholder="https://..." />
+        </div>
         <button type="submit" className="btn-primary w-full">Submit Daily Report</button>
       </form>
     </div>

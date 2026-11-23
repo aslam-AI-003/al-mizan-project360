@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { FileText, Image as ImageIcon } from "lucide-react";
+import { FileText } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getOwnedProjectOrRedirect } from "@/lib/supervisor-guard";
@@ -17,10 +17,7 @@ export default async function SupervisorProjectPage({ params }: PageProps<"/supe
 
   const project = await getOwnedProjectOrRedirect(id, session.userId);
 
-  const [recentReports, recentPhotos] = await Promise.all([
-    prisma.dailyReport.findMany({ where: { projectId: id }, orderBy: { date: "desc" }, take: 5 }),
-    prisma.projectPhoto.findMany({ where: { projectId: id }, orderBy: { createdAt: "desc" }, take: 8 }),
-  ]);
+  const recentReports = await prisma.dailyReport.findMany({ where: { projectId: id }, orderBy: { date: "desc" }, take: 5 });
 
   return (
     <div className="space-y-6">
@@ -64,32 +61,12 @@ export default async function SupervisorProjectPage({ params }: PageProps<"/supe
                     {formatDate(report.date)} · {report.progressPercentage}% progress
                   </p>
                 </div>
-                <StatusBadge status={report.status} />
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <div>
-        <h3 className="mb-3 text-sm font-bold text-[var(--foreground)]">Recent Photos</h3>
-        {recentPhotos.length === 0 ? (
-          <EmptyState icon={ImageIcon} title="No photos yet" description="Upload site progress photos above." />
-        ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {recentPhotos.map((photo) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={photo.id}
-                src={photo.url}
-                alt={photo.caption}
-                title={photo.caption}
-                className="aspect-square w-full rounded-xl object-cover"
-              />
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
