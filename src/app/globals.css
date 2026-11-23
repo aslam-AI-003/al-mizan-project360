@@ -32,6 +32,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Keep focused fields clear of the sticky header and the bottom menu / Save bar. */
+html {
+  scroll-padding-top: 5rem;
+  scroll-padding-bottom: 11rem;
+}
 body {
   background: var(--background);
   color: var(--foreground);
@@ -57,24 +62,27 @@ body {
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none bg-red-600 text-white hover:bg-red-700;
   }
+  /* Small buttons stay comfortably tappable on phones. */
   .btn-sm {
-    @apply px-3 py-1.5 text-xs;
+    @apply px-3 py-2 text-[13px] md:py-1.5 md:text-xs;
   }
 
+  /* 16px text on phones: iPhone Safari zooms into any field smaller than that. */
   .input {
-    @apply w-full rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-navy focus:ring-2 focus:ring-brand-navy/15;
+    @apply min-h-11 w-full rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-base outline-none transition focus:border-brand-navy focus:ring-2 focus:ring-brand-navy/15 md:min-h-10 md:text-sm;
   }
   .label {
-    @apply mb-1.5 block text-xs font-medium text-black/60;
+    @apply mb-1.5 block text-[13px] font-medium text-black/60 md:text-xs;
   }
-  .select {
-    @apply w-full rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-navy focus:ring-2 focus:ring-brand-navy/15 appearance-none;
+  /* The shared <Picker> button: looks like an input, opens the full option list. */
+  .picker-trigger {
+    @apply flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-left text-base outline-none transition focus:border-brand-navy focus:ring-2 focus:ring-brand-navy/15 md:min-h-10 md:text-sm;
   }
   .textarea {
-    @apply w-full rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-navy focus:ring-2 focus:ring-brand-navy/15 resize-none;
+    @apply w-full rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-base outline-none transition focus:border-brand-navy focus:ring-2 focus:ring-brand-navy/15 resize-none md:text-sm;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+    @apply inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold;
   }
 }

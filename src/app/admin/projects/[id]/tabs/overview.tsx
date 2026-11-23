@@ -1,9 +1,17 @@
 import type { Project } from "@prisma/client";
+import { Picker } from "@/components/picker";
 import type { SpendBreakdown } from "@/lib/project-costs";
 import { formatINR } from "@/lib/format";
 import { updateProject } from "../actions";
 
-const STATUSES = ["PLANNING", "STARTED", "IN_PROGRESS", "ON_HOLD", "DELAYED", "COMPLETED"];
+const STATUSES = [
+  { value: "PLANNING", label: "Planning" },
+  { value: "STARTED", label: "Started" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "ON_HOLD", label: "On Hold" },
+  { value: "DELAYED", label: "Delayed" },
+  { value: "COMPLETED", label: "Completed" },
+];
 
 export function OverviewTab({ project, spend }: { project: Project; spend: SpendBreakdown }) {
   const toInputDate = (d: Date) => new Date(d).toISOString().slice(0, 10);
@@ -28,11 +36,7 @@ export function OverviewTab({ project, spend }: { project: Project; spend: Spend
             </div>
             <div>
               <label className="label">Status</label>
-              <select name="status" defaultValue={project.status} className="select">
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>{s.replace("_", " ")}</option>
-                ))}
-              </select>
+              <Picker name="status" title="Status" defaultValue={project.status} options={STATUSES} />
             </div>
             <div>
               <label className="label">Budget (₹)</label>

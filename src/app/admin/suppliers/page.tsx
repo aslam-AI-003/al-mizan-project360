@@ -21,17 +21,17 @@ export default async function SuppliersPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="card p-4">
+        <div className="card p-3 sm:p-4">
           <p className="text-xs text-black/50">Total Bought</p>
-          <p className="text-lg font-bold">{formatINR(totals.bought)}</p>
+          <p className="text-base font-bold sm:text-lg">{formatINR(totals.bought)}</p>
         </div>
-        <div className="card p-4">
+        <div className="card p-3 sm:p-4">
           <p className="text-xs text-black/50">Paid</p>
-          <p className="text-lg font-bold text-[var(--status-success)]">{formatINR(totals.paid)}</p>
+          <p className="text-base font-bold sm:text-lg text-[var(--status-success)]">{formatINR(totals.paid)}</p>
         </div>
-        <div className="card p-4">
+        <div className="card p-3 sm:p-4">
           <p className="text-xs text-black/50">Pending</p>
-          <p className="text-lg font-bold text-[var(--status-warning)]">{formatINR(totals.pending)}</p>
+          <p className="text-base font-bold sm:text-lg text-[var(--status-warning)]">{formatINR(totals.pending)}</p>
         </div>
       </div>
 
@@ -40,7 +40,29 @@ export default async function SuppliersPage() {
           {suppliers.length === 0 ? (
             <EmptyState icon={Truck} title="No suppliers yet" description="Suppliers are added automatically when you enter a material purchase." />
           ) : (
-            <div className="card overflow-x-auto p-0">
+            <>
+            {/* Phone: one card per supplier */}
+            <div className="space-y-2 md:hidden">
+              {suppliers.map((s) => (
+                <Link key={s.id} href={`/admin/suppliers/${s.id}`} className="card block p-4 active:bg-black/[0.02]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-bold text-brand-navy">{s.name}</p>
+                      {s.phone && <p className="text-[13px] text-black/45">{s.phone}</p>}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[13px] text-black/45">{s.pending < 0 ? "Advance" : "Pending"}</p>
+                      <p className={`text-base font-bold ${s.pending > 0 ? "text-[var(--status-warning)]" : s.pending < 0 ? "text-[var(--status-info)]" : "text-[var(--status-success)]"}`}>
+                        {formatINR(Math.abs(s.pending))}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm text-black/55">Bought {formatINR(s.bought)} · Paid {formatINR(s.paid)}</p>
+                </Link>
+              ))}
+            </div>
+            {/* Laptop: table */}
+            <div className="card hidden overflow-x-auto p-0 md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-black/5 text-left text-xs text-black/40">
@@ -67,6 +89,7 @@ export default async function SuppliersPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
 

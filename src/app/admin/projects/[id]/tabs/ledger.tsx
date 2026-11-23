@@ -16,7 +16,7 @@ export function LedgerTab({ project, spend, days }: { project: Project; spend: S
   return (
     <div className="space-y-6">
       <div className="card p-5">
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5 [&>*:last-child]:col-span-2 md:[&>*:last-child]:col-span-1">
           <Figure label="Budget" value={project.budget} />
           <Figure label="Labour" value={spend.labour} />
           <Figure label="Material" value={spend.material} />
@@ -48,7 +48,38 @@ export function LedgerTab({ project, spend, days }: { project: Project; spend: S
         {rows.length === 0 ? (
           <EmptyState icon={BookOpen} title="No spending yet" description="Add a Daily Entry and it will appear here." />
         ) : (
-          <div className="card overflow-x-auto p-0">
+          <>
+          {/* Phone: one card per day */}
+          <div className="space-y-2 md:hidden">
+            {rows.map((d) => (
+              <Link key={d.date} href={`/admin/entry?project=${project.id}&date=${d.date}`} className="card block p-4 active:bg-black/[0.02]">
+                <div className="flex items-center justify-between">
+                  <p className="text-base font-bold text-brand-navy">{formatDate(new Date(d.date))}</p>
+                  <p className="text-base font-bold">{formatINR(d.total)}</p>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <p className="text-[13px] text-black/45">Labour</p>
+                    <p className="font-medium">{formatINR(d.labour)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[13px] text-black/45">Material</p>
+                    <p className="font-medium">{formatINR(d.material)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[13px] text-black/45">Other</p>
+                    <p className="font-medium">{formatINR(d.other)}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-black/5 pt-2 text-sm">
+                  <span className="text-black/50">Balance after this day</span>
+                  <span className={`font-bold ${d.remaining < 0 ? "text-[var(--status-danger)]" : "text-[var(--status-success)]"}`}>{formatINR(d.remaining)}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+          {/* Laptop: table */}
+          <div className="card hidden overflow-x-auto p-0 md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-black/5 text-left text-xs text-black/40">
@@ -80,6 +111,7 @@ export function LedgerTab({ project, spend, days }: { project: Project; spend: S
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>
